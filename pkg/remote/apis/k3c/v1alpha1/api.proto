@@ -1,0 +1,305 @@
+syntax = 'proto3';
+
+package k3c.v1alpha1;
+option go_package = "v1alpha1";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "k8s.io/api/core/v1/generated.proto";
+import "k8s.io/cri-api/pkg/apis/runtime/v1alpha2/api.proto";
+
+option (gogoproto.goproto_stringer_all) = false;
+option (gogoproto.stringer_all) =  true;
+option (gogoproto.goproto_getters_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_unrecognized_all) = false;
+
+// Runtime service defines the public APIs for remote container runtimes
+service ContainerService {
+    rpc ListPods(ListPodsRequest) returns (ListPodsResponse) {}
+    rpc CreatePod(CreatePodRequest) returns (CreatePodResponse) {}
+    rpc CreateContainer(CreateContainerRequest) returns (CreateContainerResponse) {}
+    rpc StartContainer(StartContainerRequest) returns (StartContainerResponse) {}
+    rpc StopContainer(StopContainerRequest) returns (StopContainerResponse) {}
+    rpc RemoveContainer(RemoveContainerRequest) returns (RemoveContainerResponse) {}
+    rpc GetContainer(GetContainerRequest) returns (GetContainerResponse) {}
+    rpc Attach(AttachRequest) returns (StreamResponse) {}
+    rpc Exec(ExecRequest) returns (StreamResponse) {}
+    rpc LogContainer(LogContainerRequest) returns (stream LogEntry) {}
+
+    rpc ListImages(ListImagesRequest) returns (ListImagesResponse) {}
+    rpc RemoveImage(RemoveImageRequest) returns (RemoveImageResponse) {}
+    rpc PullImage(PullImageRequest) returns (PullImageResponse) {}
+    rpc PushImage(PushImageRequest) returns (PushImageResponse) {}
+
+    rpc GetImage(GetImageRequest) returns (GetImageResponse) {}
+    rpc TagImage(TagImageRequest) returns (TagImageResponse) {}
+
+    rpc PullProgress(InfoRequest) returns (stream InfoResponse) {}
+    rpc PushProgress(InfoRequest) returns (stream InfoResponse) {}
+
+    rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse) {}
+    rpc CreateVolume(CreateVolumeRequest) returns (CreateVolumeResponse) {}
+    rpc RemoveVolume(RemoveVolumeRequest) returns (RemoveVolumeResponse) {}
+
+    rpc Events(EventsRequest) returns (stream Event) {}
+}
+
+message ListVolumesRequest {
+}
+
+message ListVolumesResponse {
+    repeated Volume volumes = 1;
+}
+
+message CreateVolumeRequest {
+    string name = 1;
+}
+
+message CreateVolumeResponse {
+    Volume volume = 1;
+}
+
+message RemoveVolumeRequest {
+    string name = 1;
+    bool force = 2;
+}
+
+message RemoveVolumeResponse {
+}
+
+message Volume {
+    string id = 1;
+}
+
+message EventsRequest {
+}
+
+message Event {
+    string id = 1;
+    string name = 2;
+}
+
+message LogContainerRequest {
+    string name = 1;
+    k8s.io.api.core.v1.PodLogOptions opts = 2;
+}
+
+message LogEntry {
+    bool stderr = 1;
+    bytes message = 2;
+}
+
+message GetContainerRequest {
+    string name = 1;
+}
+
+message GetContainerResponse {
+    k8s.io.api.core.v1.Pod pod = 1;
+    k8s.io.api.core.v1.Container container = 2;
+    string container_id = 3;
+}
+
+message RemoveContainerRequest {
+    string container_id = 1;
+}
+
+message RemoveContainerResponse {
+}
+
+message StopContainerRequest {
+    string container_id = 1;
+    int64 timeout = 2;
+}
+
+message StopContainerResponse {
+}
+
+message StartContainerRequest {
+    string container_id = 1;
+}
+
+message StartContainerResponse {
+}
+
+message ListPodsRequest {
+}
+
+message ListPodsResponse {
+    repeated k8s.io.api.core.v1.Pod pods = 1;
+}
+
+message CreatePodRequest {
+    string name = 1;
+    PodOptions opts = 2;
+}
+
+message CreatePodResponse {
+    string PodID = 1;
+}
+
+message ContainerOptions {
+    map<string, string> labels = 1;
+    string name = 2;
+    uint32 attempt = 3;
+    repeated string command = 4;
+    repeated string args = 5;
+    string working_dir = 6;
+    repeated runtime.v1alpha2.KeyValue envs = 7;
+    repeated runtime.v1alpha2.Mount mounts = 8;
+    repeated runtime.v1alpha2.Device devices = 9;
+    bool stdin = 10;
+    bool stdin_once = 11;
+    bool tty = 12;
+    int64 millis_cpu = 13;
+    runtime.v1alpha2.LinuxContainerResources linux_resources = 14;
+
+    repeated string add_capabilities = 15;
+    repeated string drop_capabilities = 16;
+    repeated string apparmor_profile = 17;
+    bool no_new_privs = 18;
+    repeated string masked_paths = 19;
+    repeated string readonly_paths = 20;
+
+    SharedSecurityOptions security_context = 22;
+}
+
+message PodOptions {
+    string hostname = 1;
+    string runtime = 2;
+    map<string, string> labels = 3;
+    map<string, string> annotations = 4;
+    runtime.v1alpha2.DNSConfig dns_config = 5;
+    repeated runtime.v1alpha2.PortMapping port_mappings = 6;
+    string cgroup_parent = 7;
+    map<string, string> sysctls = 8;
+
+    SharedSecurityOptions security_context = 10;
+}
+
+message SharedSecurityOptions {
+    bool privileged = 1;
+    runtime.v1alpha2.SELinuxOption selinux_options = 2;
+    runtime.v1alpha2.NamespaceMode net_mode = 3;
+    runtime.v1alpha2.NamespaceMode pid_mode = 4;
+    runtime.v1alpha2.NamespaceMode ipc_mode = 5;
+    string user = 6;
+    string group = 7;
+    repeated string groups = 8;
+    bool readonly_root = 9;
+    string seccomp_profile = 10;
+}
+
+message CreateContainerRequest {
+    string pod_id = 1;
+    string image = 2;
+    ContainerOptions opts = 3;
+}
+
+message CreateContainerResponse {
+    string container_id = 1;
+}
+
+message ExecRequest {
+    string name = 1;
+    repeated string cmd = 2;
+    ExecOptions opts = 3;
+}
+
+message ExecOptions {
+    bool tty = 1;
+    bool stdin = 2;
+}
+
+message ExecResponse {
+    // Fully qualified URL of the exec streaming server.
+    string url = 1;
+}
+
+message AttachRequest {
+    string name = 1;
+    AttachOptions opts = 2;
+}
+
+message AttachOptions {
+    bool no_stdin = 1;
+}
+
+message StreamResponse {
+    string url = 1;
+    bool tty = 2;
+    bool stdin = 3;
+}
+
+message ListImagesRequest {
+}
+
+// Basic information about a container image.
+message Image {
+    string id = 1;
+    repeated string tags = 2;
+    repeated string digests = 3;
+    uint64 size = 4;
+}
+
+message ListImagesResponse {
+    repeated Image images = 1;
+}
+
+message PullImageRequest {
+    string image = 1;
+    runtime.v1alpha2.AuthConfig auth_config = 2;
+}
+
+message PullImageResponse {
+    string image = 1;
+}
+
+message PushImageRequest {
+    string image = 1;
+    runtime.v1alpha2.AuthConfig auth_config = 2;
+}
+
+message PushImageResponse {
+}
+
+message GetImageRequest {
+    string image = 1;
+}
+
+message GetImageResponse {
+    Image image = 1;
+}
+
+message TagImageRequest {
+    string image = 1;
+    repeated string tags = 2;
+}
+
+message TagImageResponse {
+}
+
+message InfoRequest {
+    string image = 1;
+}
+
+message InfoResponse {
+    repeated Info info = 1;
+}
+
+message Info {
+    string ref = 1;
+    string status = 2;
+    int64 offset = 3;
+    int64 total = 4;
+    int64 started_at = 5;
+    int64 updated_at = 6;
+}
+
+
+message RemoveImageRequest {
+    string image = 1;
+}
+
+message RemoveImageResponse {}

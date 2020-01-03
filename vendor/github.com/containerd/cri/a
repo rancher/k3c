@@ -1,0 +1,487 @@
+commit 7dce80d9ca5b0b595832c27c902ffd7aed10814c
+Author: Darren Shepherd <darren@rancher.com>
+Date:   Mon Aug 26 22:04:53 2019 -0700
+
+    hackup containerd
+
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_attach.go b/vendor/github.com/containerd/cri/pkg/server/container_attach.go
+index 91cdaacc5b..7a4c2c6094 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_attach.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_attach.go
+@@ -24,7 +24,7 @@ import (
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+ 	"k8s.io/client-go/tools/remotecommand"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	cio "github.com/containerd/cri/pkg/server/io"
+ )
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_create.go b/vendor/github.com/containerd/cri/pkg/server/container_create.go
+index a36a9ce7b5..85313132bd 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_create.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_create.go
+@@ -42,7 +42,7 @@ import (
+ 	"github.com/syndtr/gocapability/capability"
+ 	"golang.org/x/net/context"
+ 	"golang.org/x/sys/unix"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	"github.com/containerd/cri/pkg/annotations"
+ 	customopts "github.com/containerd/cri/pkg/containerd/opts"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_exec.go b/vendor/github.com/containerd/cri/pkg/server/container_exec.go
+index c5d89b250f..7cff697359 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_exec.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_exec.go
+@@ -19,7 +19,7 @@ package server
+ import (
+ 	"github.com/pkg/errors"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // Exec prepares a streaming endpoint to execute a command in the container, and returns the address.
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_execsync.go b/vendor/github.com/containerd/cri/pkg/server/container_execsync.go
+index ba64cd021e..a9c592cc95 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_execsync.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_execsync.go
+@@ -29,7 +29,7 @@ import (
+ 	"golang.org/x/net/context"
+ 	"golang.org/x/sys/unix"
+ 	"k8s.io/client-go/tools/remotecommand"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
+ 	cioutil "github.com/containerd/cri/pkg/ioutil"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_list.go b/vendor/github.com/containerd/cri/pkg/server/container_list.go
+index 0adfa67195..2b53a2ad27 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_list.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_list.go
+@@ -19,7 +19,7 @@ package server
+ import (
+ 	"golang.org/x/net/context"
+ 
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	containerstore "github.com/containerd/cri/pkg/store/container"
+ )
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_log_reopen.go b/vendor/github.com/containerd/cri/pkg/server/container_log_reopen.go
+index 515cc20b92..a0a7c1edfb 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_log_reopen.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_log_reopen.go
+@@ -20,7 +20,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"golang.org/x/net/context"
+ 
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // ReopenContainerLog asks the cri plugin to reopen the stdout/stderr log file for the container.
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_remove.go b/vendor/github.com/containerd/cri/pkg/server/container_remove.go
+index 9b70cac003..295faaf435 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_remove.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_remove.go
+@@ -23,7 +23,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	"github.com/containerd/cri/pkg/log"
+ 	"github.com/containerd/cri/pkg/store"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_start.go b/vendor/github.com/containerd/cri/pkg/server/container_start.go
+index cd75f2a1b1..7927c534fd 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_start.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_start.go
+@@ -27,7 +27,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
+ 	cioutil "github.com/containerd/cri/pkg/ioutil"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_stats.go b/vendor/github.com/containerd/cri/pkg/server/container_stats.go
+index 77b77227c5..1580c04000 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_stats.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_stats.go
+@@ -20,7 +20,7 @@ import (
+ 	tasks "github.com/containerd/containerd/api/services/tasks/v1"
+ 	"github.com/pkg/errors"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // ContainerStats returns stats of the container. If the container does not
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_stats_list.go b/vendor/github.com/containerd/cri/pkg/server/container_stats_list.go
+index f0605ef77c..ed697c2696 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_stats_list.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_stats_list.go
+@@ -23,7 +23,7 @@ import (
+ 	"github.com/containerd/typeurl"
+ 	"github.com/pkg/errors"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	containerstore "github.com/containerd/cri/pkg/store/container"
+ )
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_status.go b/vendor/github.com/containerd/cri/pkg/server/container_status.go
+index 1e43bd42ff..bfd0e1d280 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_status.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_status.go
+@@ -22,7 +22,7 @@ import (
+ 	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
+ 	"github.com/pkg/errors"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	"github.com/containerd/cri/pkg/store"
+ 	containerstore "github.com/containerd/cri/pkg/store/container"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_stop.go b/vendor/github.com/containerd/cri/pkg/server/container_stop.go
+index 8286b7d60c..3332ee2ee7 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_stop.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_stop.go
+@@ -26,7 +26,7 @@ import (
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+ 	"golang.org/x/sys/unix"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
+ 	"github.com/containerd/cri/pkg/store"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/container_update_resources.go b/vendor/github.com/containerd/cri/pkg/server/container_update_resources.go
+index fc02954c62..3e01133c84 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/container_update_resources.go
++++ b/vendor/github.com/containerd/cri/pkg/server/container_update_resources.go
+@@ -27,7 +27,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
+ 	containerstore "github.com/containerd/cri/pkg/store/container"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/helpers.go b/vendor/github.com/containerd/cri/pkg/server/helpers.go
+index ca5fbd3860..cdfabfa612 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/helpers.go
++++ b/vendor/github.com/containerd/cri/pkg/server/helpers.go
+@@ -39,7 +39,7 @@ import (
+ 	"github.com/opencontainers/selinux/go-selinux/label"
+ 	"github.com/pkg/errors"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	criconfig "github.com/containerd/cri/pkg/config"
+ 	"github.com/containerd/cri/pkg/store"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/image_list.go b/vendor/github.com/containerd/cri/pkg/server/image_list.go
+index cb1253cc47..6c0dd3ffda 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/image_list.go
++++ b/vendor/github.com/containerd/cri/pkg/server/image_list.go
+@@ -18,7 +18,7 @@ package server
+ 
+ import (
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // ListImages lists existing images.
+diff --git a/vendor/github.com/containerd/cri/pkg/server/image_pull.go b/vendor/github.com/containerd/cri/pkg/server/image_pull.go
+index 9053b4838f..1d4aa9ede1 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/image_pull.go
++++ b/vendor/github.com/containerd/cri/pkg/server/image_pull.go
+@@ -32,7 +32,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	"github.com/containerd/cri/pkg/util"
+ )
+diff --git a/vendor/github.com/containerd/cri/pkg/server/image_remove.go b/vendor/github.com/containerd/cri/pkg/server/image_remove.go
+index f0ce7114fb..e725e6e5c2 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/image_remove.go
++++ b/vendor/github.com/containerd/cri/pkg/server/image_remove.go
+@@ -21,7 +21,7 @@ import (
+ 	"github.com/containerd/containerd/images"
+ 	"github.com/pkg/errors"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	"github.com/containerd/cri/pkg/store"
+ )
+diff --git a/vendor/github.com/containerd/cri/pkg/server/image_status.go b/vendor/github.com/containerd/cri/pkg/server/image_status.go
+index 8337bdb10c..657b127b98 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/image_status.go
++++ b/vendor/github.com/containerd/cri/pkg/server/image_status.go
+@@ -22,7 +22,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	"github.com/containerd/cri/pkg/store"
+ 	imagestore "github.com/containerd/cri/pkg/store/image"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/imagefs_info.go b/vendor/github.com/containerd/cri/pkg/server/imagefs_info.go
+index 55b3d260ba..30cf9623c7 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/imagefs_info.go
++++ b/vendor/github.com/containerd/cri/pkg/server/imagefs_info.go
+@@ -21,7 +21,7 @@ import (
+ 
+ 	"golang.org/x/net/context"
+ 
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // ImageFsInfo returns information of the filesystem that is used to store images.
+diff --git a/vendor/github.com/containerd/cri/pkg/server/instrumented_service.go b/vendor/github.com/containerd/cri/pkg/server/instrumented_service.go
+index 88e05f266f..0d7ed22f8a 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/instrumented_service.go
++++ b/vendor/github.com/containerd/cri/pkg/server/instrumented_service.go
+@@ -21,7 +21,7 @@ import (
+ 
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	api "github.com/containerd/cri/pkg/api/v1"
+ 	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/io/helpers.go b/vendor/github.com/containerd/cri/pkg/server/io/helpers.go
+index 612a1f39e3..e9a0016f64 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/io/helpers.go
++++ b/vendor/github.com/containerd/cri/pkg/server/io/helpers.go
+@@ -26,7 +26,7 @@ import (
+ 	"github.com/containerd/containerd/cio"
+ 	"github.com/containerd/fifo"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // AttachOptions specifies how to attach to a container.
+diff --git a/vendor/github.com/containerd/cri/pkg/server/io/logger.go b/vendor/github.com/containerd/cri/pkg/server/io/logger.go
+index c0a0d11ca4..a324adf500 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/io/logger.go
++++ b/vendor/github.com/containerd/cri/pkg/server/io/logger.go
+@@ -25,7 +25,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/sirupsen/logrus"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	cioutil "github.com/containerd/cri/pkg/ioutil"
+ )
+diff --git a/vendor/github.com/containerd/cri/pkg/server/restart.go b/vendor/github.com/containerd/cri/pkg/server/restart.go
+index e4be81dc5f..aeca2aec6a 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/restart.go
++++ b/vendor/github.com/containerd/cri/pkg/server/restart.go
+@@ -32,7 +32,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
+ 	"github.com/containerd/cri/pkg/netns"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/sandbox_list.go b/vendor/github.com/containerd/cri/pkg/server/sandbox_list.go
+index 3a0879715e..131f97d578 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/sandbox_list.go
++++ b/vendor/github.com/containerd/cri/pkg/server/sandbox_list.go
+@@ -18,7 +18,7 @@ package server
+ 
+ import (
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	sandboxstore "github.com/containerd/cri/pkg/store/sandbox"
+ )
+diff --git a/vendor/github.com/containerd/cri/pkg/server/sandbox_portforward.go b/vendor/github.com/containerd/cri/pkg/server/sandbox_portforward.go
+index 834de4cbc7..cd8409d02f 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/sandbox_portforward.go
++++ b/vendor/github.com/containerd/cri/pkg/server/sandbox_portforward.go
+@@ -27,7 +27,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	sandboxstore "github.com/containerd/cri/pkg/store/sandbox"
+ )
+diff --git a/vendor/github.com/containerd/cri/pkg/server/sandbox_remove.go b/vendor/github.com/containerd/cri/pkg/server/sandbox_remove.go
+index b4ad03fe10..8eb6e46f68 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/sandbox_remove.go
++++ b/vendor/github.com/containerd/cri/pkg/server/sandbox_remove.go
+@@ -22,7 +22,7 @@ import (
+ 	"github.com/docker/docker/pkg/system"
+ 	"github.com/pkg/errors"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	"github.com/containerd/cri/pkg/log"
+ 	"github.com/containerd/cri/pkg/store"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/sandbox_run.go b/vendor/github.com/containerd/cri/pkg/server/sandbox_run.go
+index 52fa3b4e5d..d7ad043037 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/sandbox_run.go
++++ b/vendor/github.com/containerd/cri/pkg/server/sandbox_run.go
+@@ -34,7 +34,7 @@ import (
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+ 	"golang.org/x/sys/unix"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	"github.com/containerd/cri/pkg/annotations"
+ 	criconfig "github.com/containerd/cri/pkg/config"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/sandbox_status.go b/vendor/github.com/containerd/cri/pkg/server/sandbox_status.go
+index ff3411cedd..7708ca21ab 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/sandbox_status.go
++++ b/vendor/github.com/containerd/cri/pkg/server/sandbox_status.go
+@@ -24,7 +24,7 @@ import (
+ 	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
+ 	"github.com/pkg/errors"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	sandboxstore "github.com/containerd/cri/pkg/store/sandbox"
+ )
+diff --git a/vendor/github.com/containerd/cri/pkg/server/sandbox_stop.go b/vendor/github.com/containerd/cri/pkg/server/sandbox_stop.go
+index e1bb09e4c3..5cd4079947 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/sandbox_stop.go
++++ b/vendor/github.com/containerd/cri/pkg/server/sandbox_stop.go
+@@ -26,7 +26,7 @@ import (
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+ 	"golang.org/x/sys/unix"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
+ 	sandboxstore "github.com/containerd/cri/pkg/store/sandbox"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/service.go b/vendor/github.com/containerd/cri/pkg/server/service.go
+index d041d30ddc..e4c41aa028 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/service.go
++++ b/vendor/github.com/containerd/cri/pkg/server/service.go
+@@ -33,7 +33,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"github.com/sirupsen/logrus"
+ 	"google.golang.org/grpc"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 	"k8s.io/kubernetes/pkg/kubelet/server/streaming"
+ 
+ 	api "github.com/containerd/cri/pkg/api/v1"
+diff --git a/vendor/github.com/containerd/cri/pkg/server/status.go b/vendor/github.com/containerd/cri/pkg/server/status.go
+index f71b781962..12a75fa4b7 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/status.go
++++ b/vendor/github.com/containerd/cri/pkg/server/status.go
+@@ -24,7 +24,7 @@ import (
+ 	cni "github.com/containerd/go-cni"
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // networkNotReadyReason is the reason reported when network is not ready.
+diff --git a/vendor/github.com/containerd/cri/pkg/server/update_runtime_config.go b/vendor/github.com/containerd/cri/pkg/server/update_runtime_config.go
+index 0f55aedf8e..5ce5805f53 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/update_runtime_config.go
++++ b/vendor/github.com/containerd/cri/pkg/server/update_runtime_config.go
+@@ -25,7 +25,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // cniConfigTemplate contains the values containerd will overwrite
+diff --git a/vendor/github.com/containerd/cri/pkg/server/version.go b/vendor/github.com/containerd/cri/pkg/server/version.go
+index a23a281121..4d74ef8410 100644
+--- a/vendor/github.com/containerd/cri/pkg/server/version.go
++++ b/vendor/github.com/containerd/cri/pkg/server/version.go
+@@ -19,7 +19,7 @@ package server
+ import (
+ 	"github.com/containerd/containerd/version"
+ 	"golang.org/x/net/context"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	"github.com/containerd/cri/pkg/constants"
+ )
+diff --git a/vendor/github.com/containerd/cri/pkg/store/container/container.go b/vendor/github.com/containerd/cri/pkg/store/container/container.go
+index 07a57b187c..444eb33b21 100644
+--- a/vendor/github.com/containerd/cri/pkg/store/container/container.go
++++ b/vendor/github.com/containerd/cri/pkg/store/container/container.go
+@@ -21,7 +21,7 @@ import (
+ 
+ 	"github.com/containerd/containerd"
+ 	"github.com/docker/docker/pkg/truncindex"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ 
+ 	cio "github.com/containerd/cri/pkg/server/io"
+ 	"github.com/containerd/cri/pkg/store"
+diff --git a/vendor/github.com/containerd/cri/pkg/store/container/metadata.go b/vendor/github.com/containerd/cri/pkg/store/container/metadata.go
+index 6dc7d52336..73d64a8f57 100644
+--- a/vendor/github.com/containerd/cri/pkg/store/container/metadata.go
++++ b/vendor/github.com/containerd/cri/pkg/store/container/metadata.go
+@@ -20,7 +20,7 @@ import (
+ 	"encoding/json"
+ 
+ 	"github.com/pkg/errors"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // NOTE(random-liu):
+diff --git a/vendor/github.com/containerd/cri/pkg/store/container/status.go b/vendor/github.com/containerd/cri/pkg/store/container/status.go
+index d074b659c3..20fa4c8e4f 100644
+--- a/vendor/github.com/containerd/cri/pkg/store/container/status.go
++++ b/vendor/github.com/containerd/cri/pkg/store/container/status.go
+@@ -25,7 +25,7 @@ import (
+ 
+ 	"github.com/docker/docker/pkg/ioutils"
+ 	"github.com/pkg/errors"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // The container state machine in the CRI plugin:
+diff --git a/vendor/github.com/containerd/cri/pkg/store/sandbox/metadata.go b/vendor/github.com/containerd/cri/pkg/store/sandbox/metadata.go
+index a5c803ca79..b2ac1f6b97 100644
+--- a/vendor/github.com/containerd/cri/pkg/store/sandbox/metadata.go
++++ b/vendor/github.com/containerd/cri/pkg/store/sandbox/metadata.go
+@@ -20,7 +20,7 @@ import (
+ 	"encoding/json"
+ 
+ 	"github.com/pkg/errors"
+-	runtime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
++	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+ )
+ 
+ // NOTE(random-liu):

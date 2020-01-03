@@ -1,0 +1,23 @@
+Commands:
+  cp          
+  history     
+  info        
+  inspect     
+  kill        
+  load        
+  login       
+  logout      
+  port        
+  restart     
+  save        
+  stats       
+  top         
+  update      
+  version     
+  wait        
+
+Functionality:
+  dns
+  restart policy
+  usermode/rootless
+  volume deletion protection

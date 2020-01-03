@@ -1,0 +1,6 @@
+*
+!cmd
+!pkg
+!vendor
+!go.*
+!*.go
