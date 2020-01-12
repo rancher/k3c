@@ -37,7 +37,7 @@ func (b *Build) Run(ctx *cli.Context) error {
 		return err
 	}
 
-	args, err := kvfile.ReadKVMap(nil, b.AddHost)
+	args, err := kvfile.ReadKVMap(nil, b.BuildArg)
 	if err != nil {
 		return errors.Wrap(err, "parsing build-arg")
 	}

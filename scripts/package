@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e -x
+
+source $(dirname $0)/version
+
+cd $(dirname $0)/..
+
+mkdir -p dist/artifacts
+cp bin/k3c dist/artifacts/k3c${SUFFIX}
+
+IMAGE=${REPO}/k3c-data:${TAG}
+DOCKERFILE=Dockerfile
+if [ -e ${DOCKERFILE}.${ARCH} ]; then
+    DOCKERFILE=${DOCKERFILE}.${ARCH}
+fi
+
+DOCKER=$(command -v k3c)
+if [ ! -x "$DOCKER" ]; then
+    DOCKER=docker
+fi
+$DOCKER build --target data -f ${DOCKERFILE} -t ${IMAGE} .
+echo Built ${IMAGE}

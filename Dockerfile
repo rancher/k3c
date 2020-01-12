@@ -1,12 +1,19 @@
 FROM golang:1.13.4-alpine3.10 as build
 RUN apk -U --no-cache add bash git gcc musl-dev docker vim less file curl wget ca-certificates jq linux-headers zlib-dev tar zip squashfs-tools npm coreutils \
     python3 py3-pip python3-dev openssl-dev libffi-dev libseccomp libseccomp-dev make libuv-static
+RUN curl -sL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.15.0
 COPY . /go/src/github.com/rancher/k3c
+ARG MAKE=build
 ENV GO111MODULE=off
 RUN cd /go/src/github.com/rancher/k3c && \
-    go build -ldflags "-extldflags -static -s" -o /bin/k3c main.go
+    mkdir -p bin dist && \
+    make $MAKE
 
-FROM rancher/k3s:v1.0.0 as data
+FROM scratch as make
+COPY --from=build /go/src/github.com/rancher/k3c/dist/ /dist
+COPY --from=build /go/src/github.com/rancher/k3c/bin/ /bin
+
+FROM rancher/k3s:v1.0.0 as data-base
 RUN rm -rf etc/strongswan var run lib \
     bin/swanctl \
     bin/charon \
@@ -18,13 +25,16 @@ RUN rm -rf etc/strongswan var run lib \
     ctr \
     crictl
 
+FROM scratch as data
+COPY --from=data-base /bin/ /bin
+
 FROM scratch as bin
-COPY --from=build /bin/k3c /bin/k3c
+COPY --from=build /go/src/github.com/rancher/k3c/bin/k3c /bin/k3c
 
 FROM scratch
 COPY --from=bin /bin/ /bin
-COPY --from=data /bin/ /bin
-COPY --from=data /etc/ /etc
-COPY --from=data /tmp/ /tmp
+COPY --from=data-base /bin/ /bin
+COPY --from=data-base /etc/ /etc
+COPY --from=data-base /tmp/ /tmp
 VOLUME /var/lib/rancher/k3c
 CMD ["/bin/k3c","daemon", "--bridge-cidr=172.19.0.0/16"]

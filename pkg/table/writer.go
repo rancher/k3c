@@ -40,7 +40,6 @@ type Writer interface {
 
 type writer struct {
 	closed        bool
-	quite         bool
 	HeaderFormat  string
 	ValueFormat   string
 	err           error

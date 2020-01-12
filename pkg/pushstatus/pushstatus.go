@@ -43,6 +43,7 @@ func NewTracker(ctx context.Context, statusTracker docker.StatusTracker) Tracker
 			case <-ticker.C:
 				result <- ongoing.status()
 			case <-ctx.Done():
+				return
 			}
 		}
 	}()

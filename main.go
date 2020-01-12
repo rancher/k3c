@@ -7,14 +7,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/rancher/k3c/cmd/volume"
-
-	"github.com/rancher/k3c/cmd/events"
-
 	"github.com/rancher/k3c/cmd/attach"
 	"github.com/rancher/k3c/cmd/build"
 	"github.com/rancher/k3c/cmd/create"
 	"github.com/rancher/k3c/cmd/daemon"
+	"github.com/rancher/k3c/cmd/events"
 	"github.com/rancher/k3c/cmd/exec"
 	"github.com/rancher/k3c/cmd/images"
 	"github.com/rancher/k3c/cmd/logs"
@@ -27,6 +24,7 @@ import (
 	"github.com/rancher/k3c/cmd/start"
 	"github.com/rancher/k3c/cmd/stop"
 	"github.com/rancher/k3c/cmd/tag"
+	"github.com/rancher/k3c/cmd/volume"
 	"github.com/rancher/k3c/pkg/clibuilder"
 	"github.com/rancher/k3c/pkg/version"
 	"github.com/rancher/norman/v2/pkg/debug"
