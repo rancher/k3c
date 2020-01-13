@@ -14,6 +14,7 @@ import (
 	"github.com/rancher/k3c/cmd/events"
 	"github.com/rancher/k3c/cmd/exec"
 	"github.com/rancher/k3c/cmd/images"
+	"github.com/rancher/k3c/cmd/inspect"
 	"github.com/rancher/k3c/cmd/logs"
 	"github.com/rancher/k3c/cmd/ps"
 	"github.com/rancher/k3c/cmd/pull"
@@ -33,7 +34,6 @@ import (
 )
 
 var (
-	//asdf
 	appName     = filepath.Base(os.Args[0])
 	debugConfig debug.Config
 )
@@ -101,6 +101,9 @@ func main() {
 		command(&push.Push{},
 			"Push an image or a repository to a registry",
 			"NAME[:TAG]"),
+		command(&inspect.Inspect{},
+			"Return low-level information on k3c objects",
+			"NAME|ID [NAME|ID...]"),
 
 		command(&events.Events{},
 			"Get real time events from the server",

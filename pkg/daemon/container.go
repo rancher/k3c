@@ -171,7 +171,7 @@ func (c *Daemon) Attach(ctx context.Context, name string, opts *v1alpha1.AttachO
 }
 
 func (c *Daemon) GetContainer(ctx context.Context, name string) (*v1.Pod, *v1.Container, string, error) {
-	pods, err := c.listPods(ctx, false)
+	pods, err := c.listPods(ctx, true)
 	if err != nil {
 		return nil, nil, "", err
 	}

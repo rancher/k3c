@@ -77,6 +77,7 @@ COMMANDS:
    pull                Pull an image or a repository from a registry
    rmi                 Remove one or more images
    push                Push an image or a repository to a registry
+   inspect             Return low-level information on k3c objects
    events              Get real time events from the server
    daemon              Run the container daemon
    volume, volumes, v  Manage volumes
