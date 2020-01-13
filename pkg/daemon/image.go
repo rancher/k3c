@@ -242,6 +242,11 @@ func (c *Daemon) PushProgress(ctx context.Context, image string) (<-chan []statu
 }
 
 func (c *Daemon) PushImage(ctx context.Context, image string, authConfig *client.AuthConfig) error {
+	ref, err := reference.ParseDockerRef(image)
+	if err != nil {
+		return errors.Wrapf(err, "parsing %s", image)
+	}
+
 	resolver := cri.Resolver.GetResolver(toAuth(authConfig))
 	tracker := pushstatus.NewTracker(ctx, server.Tracker)
 
@@ -265,7 +270,7 @@ func (c *Daemon) PushImage(ctx context.Context, image string, authConfig *client
 		return nil, nil
 	})
 
-	return c.cClient.Push(ctx, cImage.Name, cImage.Target,
+	return c.cClient.Push(ctx, ref.String(), cImage.Target,
 		containerd.WithResolver(resolver),
 		containerd.WithImageHandler(jobHandler),
 	)
