@@ -31,7 +31,6 @@ import (
 
 // AttachOptions specifies how to attach to a container.
 type AttachOptions struct {
-	Attached chan struct{}
 	Stdin     io.Reader
 	Stdout    io.WriteCloser
 	Stderr    io.WriteCloser

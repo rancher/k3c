@@ -2,7 +2,6 @@ package cniprovider
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -30,8 +29,6 @@ func New(opt Opt) (network.Provider, error) {
 	if _, err := os.Stat(opt.BinaryDir); err != nil {
 		return nil, errors.Wrapf(err, "failed to read cni binary dir %q", opt.BinaryDir)
 	}
-
-	fmt.Println("DIRS", opt.ConfigPath, opt.BinaryDir)
 
 	cniHandle, err := cni.New(
 		cni.WithPluginDir([]string{opt.BinaryDir}),

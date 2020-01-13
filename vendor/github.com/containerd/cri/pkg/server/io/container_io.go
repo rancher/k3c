@@ -196,9 +196,6 @@ func (c *ContainerIO) Attach(opts AttachOptions) {
 		c.stderrGroup.Add(stderrKey, wc)
 		go attachStream(stderrKey, close)
 	}
-	if opts.Attached != nil {
-		close(opts.Attached)
-	}
 	wg.Wait()
 }
 
