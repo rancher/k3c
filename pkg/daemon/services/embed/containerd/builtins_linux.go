@@ -17,6 +17,7 @@
 package containerd
 
 import (
+	// plugins
 	_ "github.com/containerd/aufs"
 	_ "github.com/containerd/containerd/metrics/cgroups"
 	_ "github.com/containerd/containerd/runtime/v1/linux"

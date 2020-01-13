@@ -9,7 +9,7 @@ import (
 )
 
 type Client interface {
-	Build(ctx context.Context, contextDir string, opts *BuildOpts) (string, error)
+	Build(ctx context.Context, contextDir string, opts *Opts) (string, error)
 	Close() error
 }
 

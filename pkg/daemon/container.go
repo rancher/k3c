@@ -433,7 +433,7 @@ func toEnv(containerConfig *pb.ContainerConfig) (result []v1.EnvVar) {
 	return
 }
 
-func toResources(podId string, containerConfig *pb.ContainerConfig) (result v1.ResourceRequirements) {
+func toResources(podID string, containerConfig *pb.ContainerConfig) (result v1.ResourceRequirements) {
 	mem := containerConfig.GetLinux().GetResources().GetMemoryLimitInBytes()
 	if mem > 0 {
 		result.Requests = v1.ResourceList{}
@@ -454,7 +454,7 @@ func toResources(podId string, containerConfig *pb.ContainerConfig) (result v1.R
 			result.Requests[v1.ResourceCPU] = *resource.NewQuantity(cpuShares, resource.DecimalSI)
 		} else {
 			logrus.Errorf("Failed to parse CPU %s for container %s/%s", cpu,
-				podId,
+				podID,
 				containerConfig.GetMetadata().GetName())
 		}
 	}

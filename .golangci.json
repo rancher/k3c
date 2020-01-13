@@ -15,5 +15,20 @@
 			"/zz_generated_"
 		],
 		"deadline": "5m"
-	}
+	},
+    "issues": {
+        "exclude-rules": [
+            {
+                "path":"cmd",
+                "text":"don't use underscores in Go names",
+                "linters":["golint"]
+            },
+            {
+                "path":"cmd",
+                "text":"struct field .* should be",
+                "linters":["golint"]
+            }
+
+        ]
+    }
 }

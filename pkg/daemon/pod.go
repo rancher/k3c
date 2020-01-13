@@ -205,23 +205,23 @@ func (c *Daemon) runGC(ctx context.Context) error {
 	time.Sleep(5 * time.Second)
 
 	var lastErr error
-	for podId, count := range pods {
+	for podID, count := range pods {
 		if count == 0 {
-			logrus.Infof("Removing pod %s", podId)
+			logrus.Infof("Removing pod %s", podID)
 			_, err := c.runtime.StopPodSandbox(ctx, &pb.StopPodSandboxRequest{
-				PodSandboxId: podId,
+				PodSandboxId: podID,
 			})
 			if err != nil {
-				logrus.Errorf("Failed to stop pod: %s: %v", podId, err)
+				logrus.Errorf("Failed to stop pod: %s: %v", podID, err)
 				lastErr = err
 				continue
 			}
 
 			_, err = c.runtime.RemovePodSandbox(ctx, &pb.RemovePodSandboxRequest{
-				PodSandboxId: podId,
+				PodSandboxId: podID,
 			})
 			if err != nil {
-				logrus.Errorf("Failed to remove pod: %s: %v", podId, err)
+				logrus.Errorf("Failed to remove pod: %s: %v", podID, err)
 				lastErr = err
 			}
 		}

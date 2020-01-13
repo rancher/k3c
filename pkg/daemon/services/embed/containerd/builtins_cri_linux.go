@@ -18,4 +18,7 @@
 
 package containerd
 
-import _ "github.com/containerd/cri"
+import (
+	// plugins
+	_ "github.com/containerd/cri"
+)

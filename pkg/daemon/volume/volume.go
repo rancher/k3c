@@ -16,12 +16,12 @@ import (
 	"k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 )
 
-type VolumeType string
+type Volume string
 
 const (
-	HostPathVolumeType = VolumeType("hostPath")
-	NamedVolumeType    = VolumeType("named")
-	Ephemeral          = VolumeType("ephemeral")
+	HostPathVolumeType = Volume("hostPath")
+	NamedVolumeType    = Volume("named")
+	Ephemeral          = Volume("ephemeral")
 )
 
 var (
@@ -40,7 +40,7 @@ func New(baseDir string) (*Manager, error) {
 	}, os.MkdirAll(baseDir, 0700)
 }
 
-func PathToType(name string) (string, VolumeType) {
+func PathToType(name string) (string, Volume) {
 	if strings.HasPrefix(name, DefaultVolumeDir) {
 		name = filepath.Base(name)
 		if hexRe.MatchString(name) {

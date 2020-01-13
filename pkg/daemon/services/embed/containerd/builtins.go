@@ -18,6 +18,7 @@ package containerd
 
 // register containerd builtins here
 import (
+	// plugins
 	_ "github.com/containerd/containerd/diff/walking/plugin"
 	_ "github.com/containerd/containerd/gc/scheduler"
 	_ "github.com/containerd/containerd/runtime/restart/monitor"

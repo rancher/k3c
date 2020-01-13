@@ -11,7 +11,7 @@ import (
 	"github.com/rancher/wrangler/pkg/kv"
 )
 
-func (b *BuildOpts) Session() (result []session.Attachable, err error) {
+func (b *Opts) Session() (result []session.Attachable, err error) {
 	if len(b.Secrets) > 0 {
 		attach, err := parseSecrets(b.Secrets)
 		if err != nil {

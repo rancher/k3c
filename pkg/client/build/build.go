@@ -24,11 +24,10 @@ var (
 	ProgressStyleAuto  = ProgressStyle("auto")
 	ProgressStyleNone  = ProgressStyle("none")
 	ProgressStylePlain = ProgressStyle("plain")
-	// what's the point? this is basically the same as auto
-	ProgressStyleTTY = ProgressStyle("tty")
+	ProgressStyleTTY   = ProgressStyle("tty")
 )
 
-type BuildOpts struct {
+type Opts struct {
 	CacheFromImages []string
 	Args            map[string]string
 	Label           map[string]string
@@ -44,9 +43,9 @@ type BuildOpts struct {
 	Pull            bool
 }
 
-func (b *buildkitClient) Build(ctx context.Context, contextDir string, opts *BuildOpts) (string, error) {
+func (b *buildkitClient) Build(ctx context.Context, contextDir string, opts *Opts) (string, error) {
 	if opts == nil {
-		opts = &BuildOpts{}
+		opts = &Opts{}
 	}
 
 	tag := ""
@@ -79,7 +78,7 @@ func (b *buildkitClient) Build(ctx context.Context, contextDir string, opts *Bui
 	}
 
 	eg := errgroup.Group{}
-	resp, err := b.client.Solve(ctx, nil, solveOpts, progress(eg, opts.Progress))
+	resp, err := b.client.Solve(ctx, nil, solveOpts, progress(&eg, opts.Progress))
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +95,7 @@ func (b *buildkitClient) Build(ctx context.Context, contextDir string, opts *Bui
 	return digest, nil
 }
 
-func progress(group errgroup.Group, style ProgressStyle) chan *client.SolveStatus {
+func progress(group *errgroup.Group, style ProgressStyle) chan *client.SolveStatus {
 	var (
 		c   console.Console
 		err error
@@ -120,7 +119,7 @@ func progress(group errgroup.Group, style ProgressStyle) chan *client.SolveStatu
 	return ch
 }
 
-func (b *BuildOpts) LocalDirs(contextDir string) map[string]string {
+func (b *Opts) LocalDirs(contextDir string) map[string]string {
 	locals := map[string]string{
 		"context": contextDir,
 	}
@@ -133,7 +132,7 @@ func (b *BuildOpts) LocalDirs(contextDir string) map[string]string {
 	return locals
 }
 
-func (b *BuildOpts) defaultExporter(tag string) []client.ExportEntry {
+func (b *Opts) defaultExporter(tag string) []client.ExportEntry {
 	exp := client.ExportEntry{
 		Type:  client.ExporterImage,
 		Attrs: map[string]string{},
@@ -145,7 +144,7 @@ func (b *BuildOpts) defaultExporter(tag string) []client.ExportEntry {
 	return []client.ExportEntry{exp}
 }
 
-func (b *BuildOpts) Exports(tag string) []client.ExportEntry {
+func (b *Opts) Exports(tag string) []client.ExportEntry {
 	switch b.Output {
 	case "":
 		return b.defaultExporter(tag)
@@ -206,7 +205,7 @@ func fileOutput(dest string) func(map[string]string) (io.WriteCloser, error) {
 	}
 }
 
-func (b *BuildOpts) CacheImports() (result []client.CacheOptionsEntry) {
+func (b *Opts) CacheImports() (result []client.CacheOptionsEntry) {
 	exists := map[string]bool{}
 	for _, s := range b.CacheFromImages {
 		if exists[s] {
@@ -225,11 +224,11 @@ func (b *BuildOpts) CacheImports() (result []client.CacheOptionsEntry) {
 	return
 }
 
-func (b *BuildOpts) Frontend() string {
+func (b *Opts) Frontend() string {
 	return "dockerfile.v0"
 }
 
-func (b *BuildOpts) FrontendAttrs() map[string]string {
+func (b *Opts) FrontendAttrs() map[string]string {
 	result := map[string]string{
 		"target": b.Target,
 	}

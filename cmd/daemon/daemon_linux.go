@@ -7,8 +7,6 @@ import (
 )
 
 type Daemon struct {
-	ContainerdAddr string `usage:"Use external containerd at this address"`
-	BuildkitdAddr  string `usage:"Use external buildkitd at this address"`
 	RootDir        string `usage:"Path used for persistent state" default:"/var/lib/rancher/k3c"`
 	BootstrapImage string `usage:"Bootstrap image" default:"index.docker.io/rancher/k3c-data"`
 	StateDir       string `usage:"Path used for ephemeral runtime state" default:"/run/k3c"`

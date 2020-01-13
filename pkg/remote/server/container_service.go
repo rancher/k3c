@@ -72,6 +72,8 @@ func (s *server) GetContainer(ctx context.Context, req *v1alpha1.GetContainerReq
 
 func (s *server) LogContainer(req *v1alpha1.LogContainerRequest, resp v1alpha1.ContainerService_LogContainerServer) error {
 	ctx, cancel := context.WithCancel(resp.Context())
+	defer cancel()
+
 	result, err := s.c.LogContainer(ctx, req.GetName(), req.GetOpts())
 	if err != nil {
 		return err
@@ -182,6 +184,8 @@ func (s *server) TagImage(ctx context.Context, req *v1alpha1.TagImageRequest) (*
 
 func (s *server) PullProgress(req *v1alpha1.InfoRequest, resp v1alpha1.ContainerService_PullProgressServer) error {
 	ctx, cancel := context.WithCancel(resp.Context())
+	defer cancel()
+
 	c, err := s.c.PullProgress(ctx, req.GetImage())
 	if err != nil {
 		return err
@@ -213,6 +217,8 @@ func toInfoResponse(infos []status.Info) *v1alpha1.InfoResponse {
 
 func (s *server) PushProgress(req *v1alpha1.InfoRequest, resp v1alpha1.ContainerService_PushProgressServer) error {
 	ctx, cancel := context.WithCancel(resp.Context())
+	defer cancel()
+
 	c, err := s.c.PushProgress(ctx, req.GetImage())
 	if err != nil {
 		return err
@@ -231,6 +237,8 @@ func (s *server) PushProgress(req *v1alpha1.InfoRequest, resp v1alpha1.Container
 
 func (s *server) Events(req *v1alpha1.EventsRequest, resp v1alpha1.ContainerService_EventsServer) error {
 	ctx, cancel := context.WithCancel(resp.Context())
+	defer cancel()
+
 	events, err := s.c.Events(ctx)
 	if err != nil {
 		return err

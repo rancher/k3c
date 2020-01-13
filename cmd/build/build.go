@@ -51,7 +51,7 @@ func (b *Build) Run(ctx *cli.Context) error {
 	//	return fmt.Errorf("--tag and --output can not be combined")
 	//}
 
-	opts := &build.BuildOpts{
+	opts := &build.Opts{
 		CacheFromImages: b.CacheFrom,
 		Pull:            b.Pull,
 		Args:            args,
