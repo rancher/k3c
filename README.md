@@ -48,6 +48,8 @@ Start the daemon as root (rootless will be supported in the future if this proje
 ./k3c daemon
 ```
 
+Right now, you might need to run `iptables -P FORWARD ACCEPT` to make networking work.
+
 Run containers like you would with `docker`
 
 ```
