@@ -18,14 +18,14 @@ needed for the Kubernetes ecosystem.
 There really is nothing better than the classic Docker UX of `run/build/push/pull`.
 This tool copies the same UX as classic Docker (think Docker v1.12). The intention
 is to follow the same style but not be a 100% drop in replacement.  Behaviour and
-arguements have been changed to better match the behavior of the Kubernetes ecosystem.
+arguments have been changed to better match the behavior of the Kubernetes ecosystem.
 One change, for example, is that start/restart will always give you a fresh container
 because pods in Kubernetes are always ephemeral.
 
 ## A single binary
 
 `k3c`, similar to `k3s` and old school docker, is packaged as a single binary, because nothing
-is easier than a static binary for distribution.
+is easier for distribution than a static binary.
 
 ## Built on Kubernetes Tech (and others)
 
@@ -36,7 +36,7 @@ is used internally, and for other things OCI's [containerd](https://github.com/c
 
 ## Architecture
 
-`k3c` runs as a daemon either as root or one per user for rootless support.  **NOTE: root less isn't currently
+`k3c` runs as a daemon either as root or one per user for rootless support.  **NOTE: rootless isn't currently
 working, that's just the design right now**.  The daemon exposes a GRPC API.  For building the buildkit API is just
 exposed directly from the k3c socket.  `containerd`, `buildkitd`, and `containerd-cri` are all embedded
 directly into the k3c binary.
