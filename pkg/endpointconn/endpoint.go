@@ -18,7 +18,7 @@ func Get(ctx context.Context, endpoint string) (*grpc.ClientConn, error) {
 		return nil, err
 	}
 
-	conn, err := grpc.DialContext(ctx, target, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithContextDialer(dialer))
+	conn, err := grpc.DialContext(ctx, target, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithContextDialer(dialer), grpc.FailOnNonTempDialError(true))
 	if err != nil {
 		return nil, err
 	}
