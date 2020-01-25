@@ -25,7 +25,7 @@ func New(ctx context.Context, endpoint string) (Client, error) {
 		endpoint = DefaultEndpoint
 	}
 
-	conn, err := endpointconn.Get(ctx, endpoint)
+	conn, err := endpointconn.Get(ctx, endpoint, grpc.WithInsecure(), grpc.WithBlock(), grpc.FailOnNonTempDialError(true))
 	if err != nil {
 		return nil, err
 	}
