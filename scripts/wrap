@@ -1,9 +1,7 @@
 #!/bin/bash
-set -e -x
 
-DOCKER=$(command -v k3c)
-if [ ! -x "$DOCKER" ]; then
-    DOCKER=docker
-fi
+source $(dirname $0)/docker
+
+set -e
 
 ${DOCKER} build --target make --build-arg MAKE=$1 -o ./ .

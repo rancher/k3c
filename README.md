@@ -41,17 +41,33 @@ working, that's just the design right now**.  The daemon exposes a GRPC API.  Fo
 exposed directly from the k3c socket.  `containerd`, `buildkitd`, and `containerd-cri` are all embedded
 directly into the k3c binary.
 
+## Building
+
+Builds are currently run via `k3c` if it is available on the $PATH otherwise `docker` is assumed to be available.
+
+To build the `k3c` binary:
+
+```bash
+make build
+```
+
+To build the `k3c-data` image:
+
+```bash
+make package
+```
+
 ## Running
 
 Start the daemon as root (rootless will be supported in the future if this project takes off)
 ```bash
-./k3c daemon
+./bin/k3c daemon --group=$(id -g) --bootstrap-image=docker.io/rancher/k3c-data:dev
 ```
 
 Run containers like you would with `docker`
 
 ```
-$ ./k3c --help
+$ ./bin/k3c --help
 NAME:
    k3c - Lightweight local container platform
 
