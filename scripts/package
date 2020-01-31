@@ -1,7 +1,9 @@
 #!/bin/bash
-set -e -x
 
+source $(dirname $0)/docker
 source $(dirname $0)/version
+
+set -e
 
 cd $(dirname $0)/..
 
@@ -14,9 +16,5 @@ if [ -e ${DOCKERFILE}.${ARCH} ]; then
     DOCKERFILE=${DOCKERFILE}.${ARCH}
 fi
 
-DOCKER=$(command -v k3c)
-if [ ! -x "$DOCKER" ]; then
-    DOCKER=docker
-fi
-$DOCKER build --target data -f ${DOCKERFILE} -t ${IMAGE} .
+${DOCKER} build --target data -f ${DOCKERFILE} -t ${IMAGE} .
 echo Built ${IMAGE}
