@@ -42,7 +42,7 @@ func newDaemon(ctx context.Context, endpoint string) (*Daemon, error) {
 	if endpoint == "" {
 		endpoint = DefaultContainerdEndpoint
 	}
-	runtimeConn, err := endpointconn.Get(ctx, endpoint)
+	runtimeConn, err := endpointconn.Get(ctx, endpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return nil, err
 	}

@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func Get(ctx context.Context, endpoint string) (*grpc.ClientConn, error) {
+func Get(ctx context.Context, endpoint string, dialOpts ... grpc.DialOption) (*grpc.ClientConn, error) {
 	if !strings.HasPrefix(endpoint, "unix://") {
 		endpoint = "unix://" + endpoint
 	}
@@ -18,7 +18,7 @@ func Get(ctx context.Context, endpoint string) (*grpc.ClientConn, error) {
 		return nil, err
 	}
 
-	conn, err := grpc.DialContext(ctx, target, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithContextDialer(dialer), grpc.FailOnNonTempDialError(true))
+	conn, err := grpc.DialContext(ctx, target, append(dialOpts, grpc.WithContextDialer(dialer))...)
 	if err != nil {
 		return nil, err
 	}
