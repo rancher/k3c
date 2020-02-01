@@ -26,6 +26,7 @@ import (
 	"github.com/rancher/k3c/cmd/stop"
 	"github.com/rancher/k3c/cmd/tag"
 	"github.com/rancher/k3c/cmd/volume"
+	"github.com/rancher/k3c/cmd/wait"
 	"github.com/rancher/k3c/pkg/clibuilder"
 	"github.com/rancher/k3c/pkg/version"
 	"github.com/rancher/norman/v2/pkg/debug"
@@ -111,6 +112,9 @@ func main() {
 		command(&daemon.Daemon{},
 			"Run the container daemon",
 			""),
+		command(&wait.Wait{},
+			"Wait for container to be ready",
+			"Container"),
 		{
 			Name:    "volume",
 			Aliases: []string{"volumes", "v"},
