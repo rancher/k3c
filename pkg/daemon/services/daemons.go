@@ -15,6 +15,7 @@ import (
 	"github.com/containerd/containerd/services/opt"
 	"github.com/containerd/containerd/services/server/config"
 	criconfig "github.com/containerd/cri/pkg/config"
+	"github.com/containerd/cri/pkg/constants"
 	"github.com/pkg/errors"
 	"github.com/rancher/k3c/pkg/daemon/services/embed/buildkitd"
 	embedcontainerd "github.com/rancher/k3c/pkg/daemon/services/embed/containerd"
@@ -61,7 +62,7 @@ func newClient(ctx context.Context, address string) (*containerd.Client, error) 
 	)
 
 	for {
-		c, err = containerd.New(address, containerd.WithDefaultNamespace("k3c.io"))
+		c, err = containerd.New(address, containerd.WithDefaultNamespace(constants.K8sContainerdNamespace))
 		if err == nil {
 			break
 		}

@@ -3,6 +3,7 @@ package services
 import (
 	"path/filepath"
 
+	"github.com/containerd/cri/pkg/constants"
 	"github.com/pkg/errors"
 	"github.com/rancher/k3c/pkg/daemon/services/embed/buildkitd"
 	"github.com/sirupsen/logrus"
@@ -20,7 +21,7 @@ func startBuildkitd(containerdAddress string, serverCB buildkitd.ServerCallback,
 		"buildkitd",
 		"--root=" + filepath.Join(rootDir, "buildkitd"),
 		"--addr=" + address,
-		"--containerd-worker-namespace=k3c.io",
+		"--containerd-worker-namespace=" + constants.K8sContainerdNamespace,
 		"--containerd-worker=true",
 		"--containerd-worker-addr=" + containerdAddress,
 		"--containerd-worker-net=cni",
