@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rancher/k3c/pkg/kicker"
-
 	"github.com/containerd/containerd"
+	"github.com/containerd/cri/pkg/constants"
 	"github.com/rancher/k3c/pkg/daemon/volume"
 	"github.com/rancher/k3c/pkg/endpointconn"
+	"github.com/rancher/k3c/pkg/kicker"
 	"github.com/rancher/k3c/pkg/pushstatus"
 	"google.golang.org/grpc"
 	pb "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
@@ -18,7 +18,7 @@ import (
 var (
 	Timeout                    = 2 * time.Second
 	DefaultContainerdEndpoint  = "/run/k3c/containerd/containerd.sock"
-	DefaultContainerdNamespace = "k3c.io"
+	DefaultContainerdNamespace = constants.K8sContainerdNamespace
 	DefaultLogs                = "/var/log/pods"
 	DefaultVolumeDir           = "/var/lib/rancher/k3c/volumes"
 )
