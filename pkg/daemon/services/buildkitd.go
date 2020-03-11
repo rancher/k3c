@@ -35,9 +35,9 @@ func startBuildkitd(containerdAddress string, serverCB buildkitd.ServerCallback,
 		args = append(args, "--group="+opts.Group)
 	}
 
-	if opts.ExtraConfig != "" {
-		args = append(args, "--config="+opts.ExtraConfig)
-	}
+	//if opts.ExtraConfig != "" {
+	//	args = append(args, "--config="+opts.ExtraConfig)
+	//}
 
 	go func() {
 		buildkitd.Run(serverCB, args...)
