@@ -14,13 +14,14 @@ var (
 		"amazing",
 		"angry",
 		"awesome",
+		"beautiful",
 		"blissful",
 		"bold",
 		"boring",
 		"brave",
+		"busy",
 		"charming",
 		"clever",
-		"cocky",
 		"cool",
 		"compassionate",
 		"competent",
@@ -39,16 +40,19 @@ var (
 		"elegant",
 		"eloquent",
 		"epic",
+		"exciting",
 		"fervent",
 		"festive",
 		"flamboyant",
 		"focused",
 		"friendly",
 		"frosty",
+		"funny",
 		"gallant",
 		"gifted",
 		"goofy",
 		"gracious",
+		"great",
 		"happy",
 		"hardcore",
 		"heuristic",
@@ -56,6 +60,8 @@ var (
 		"hungry",
 		"infallible",
 		"inspiring",
+		"interesting",
+		"intelligent",
 		"jolly",
 		"jovial",
 		"keen",
@@ -69,6 +75,7 @@ var (
 		"musing",
 		"naughty",
 		"nervous",
+		"nice",
 		"nifty",
 		"nostalgic",
 		"objective",
@@ -90,6 +97,7 @@ var (
 		"silly",
 		"sleepy",
 		"stoic",
+		"strange",
 		"stupefied",
 		"suspicious",
 		"sweet",
@@ -145,7 +153,7 @@ var (
 		// Stefan Banach - Polish mathematician, was one of the founders of modern functional analysis. https://en.wikipedia.org/wiki/Stefan_Banach
 		"banach",
 
-		// Buckaroo Banzai and his mentor Dr. Hikita perfectd the "oscillation overthruster", a device that allows one to pass through solid matter. - https://en.wikipedia.org/wiki/The_Adventures_of_Buckaroo_Banzai_Across_the_8th_Dimension
+		// Buckaroo Banzai and his mentor Dr. Hikita perfected the "oscillation overthruster", a device that allows one to pass through solid matter. - https://en.wikipedia.org/wiki/The_Adventures_of_Buckaroo_Banzai_Across_the_8th_Dimension
 		"banzai",
 
 		// John Bardeen co-invented the transistor - https://en.wikipedia.org/wiki/John_Bardeen
@@ -193,6 +201,9 @@ var (
 		// Satyendra Nath Bose - He provided the foundation for Bose–Einstein statistics and the theory of the Bose–Einstein condensate. - https://en.wikipedia.org/wiki/Satyendra_Nath_Bose
 		"bose",
 
+		// Katherine Louise Bouman is an imaging scientist and Assistant Professor of Computer Science at the California Institute of Technology. She researches computational methods for imaging, and developed an algorithm that made possible the picture first visualization of a black hole using the Event Horizon Telescope. - https://en.wikipedia.org/wiki/Katie_Bouman
+		"bouman",
+
 		// Evelyn Boyd Granville - She was one of the first African-American woman to receive a Ph.D. in mathematics; she earned it in 1949 from Yale University. https://en.wikipedia.org/wiki/Evelyn_Boyd_Granville
 		"boyd",
 
@@ -219,6 +230,9 @@ var (
 
 		// Dame Mary Lucy Cartwright - British mathematician who was one of the first to study what is now known as chaos theory. Also known for Cartwright's theorem which finds applications in signal processing. https://en.wikipedia.org/wiki/Mary_Cartwright
 		"cartwright",
+
+		// George Washington Carver - American agricultural scientist and inventor. He was the most prominent black scientist of the early 20th century. https://en.wikipedia.org/wiki/George_Washington_Carver
+		"carver",
 
 		// Vinton Gray Cerf - American Internet pioneer, recognised as one of "the fathers of the Internet". With Robert Elliot Kahn, he designed TCP and IP, the primary data communication protocols of the Internet and other computer networks. https://en.wikipedia.org/wiki/Vint_Cerf
 		"cerf",
@@ -441,6 +455,9 @@ var (
 		// Yeong-Sil Jang was a Korean scientist and astronomer during the Joseon Dynasty; he invented the first metal printing press and water gauge. https://en.wikipedia.org/wiki/Jang_Yeong-sil
 		"jang",
 
+		// Mae Carol Jemison -  is an American engineer, physician, and former NASA astronaut. She became the first black woman to travel in space when she served as a mission specialist aboard the Space Shuttle Endeavour - https://en.wikipedia.org/wiki/Mae_Jemison
+		"jemison",
+
 		// Betty Jennings - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Jean_Bartik
 		"jennings",
 
@@ -576,9 +593,6 @@ var (
 		// Johanna Mestorf - German prehistoric archaeologist and first female museum director in Germany - https://en.wikipedia.org/wiki/Johanna_Mestorf
 		"mestorf",
 
-		// Marvin Minsky - Pioneer in Artificial Intelligence, co-founder of the MIT's AI Lab, won the Turing Award in 1969. https://en.wikipedia.org/wiki/Marvin_Minsky
-		"minsky",
-
 		// Maryam Mirzakhani - an Iranian mathematician and the first woman to win the Fields Medal. https://en.wikipedia.org/wiki/Maryam_Mirzakhani
 		"mirzakhani",
 
@@ -693,6 +707,9 @@ var (
 		// Mildred Sanderson - American mathematician best known for Sanderson's theorem concerning modular invariants. https://en.wikipedia.org/wiki/Mildred_Sanderson
 		"sanderson",
 
+		// Satoshi Nakamoto is the name used by the unknown person or group of people who developed bitcoin, authored the bitcoin white paper, and created and deployed bitcoin's original reference implementation. https://en.wikipedia.org/wiki/Satoshi_Nakamoto
+		"satoshi",
+
 		// Adi Shamir - Israeli cryptographer whose numerous inventions and contributions to cryptography include the Ferge Fiat Shamir identification scheme, the Rivest Shamir Adleman (RSA) public-key cryptosystem, the Shamir's secret sharing scheme, the breaking of the Merkle-Hellman cryptosystem, the TWINKLE and TWIRL factoring devices and the discovery of differential cryptanalysis (with Eli Biham). https://en.wikipedia.org/wiki/Adi_Shamir
 		"shamir",
 
@@ -722,9 +739,6 @@ var (
 
 		// Frances Spence - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Frances_Spence
 		"spence",
-
-		// Richard Matthew Stallman - the founder of the Free Software movement, the GNU project, the Free Software Foundation, and the League for Programming Freedom. He also invented the concept of copyleft to protect the ideals of this movement, and enshrined this concept in the widely-used GPL (General Public License) for software. https://en.wikiquote.org/wiki/Richard_Stallman
-		"stallman",
 
 		// Michael Stonebraker is a database research pioneer and architect of Ingres, Postgres, VoltDB and SciDB. Winner of 2014 ACM Turing Award. https://en.wikipedia.org/wiki/Michael_Stonebraker
 		"stonebraker",
