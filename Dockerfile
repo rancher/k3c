@@ -23,7 +23,8 @@ RUN rm -rf etc/strongswan var run lib \
     bin/k3s-agent \
     bin/k3s \
     bin/ctr \
-    bin/crictl
+    bin/crictl \
+ || true
 
 FROM scratch as data
 COPY --from=data-base /bin/ /bin

@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/moby/buildkit/client"
-	client2 "github.com/rancher/k3c/pkg/client"
+	bkc "github.com/moby/buildkit/client"
+	k3c "github.com/rancher/k3c/pkg/client"
 )
 
 type Client interface {
@@ -14,8 +14,8 @@ type Client interface {
 }
 
 type buildkitClient struct {
-	c      client2.Client
-	client *client.Client
+	c      k3c.Client
+	client *bkc.Client
 }
 
 func (b *buildkitClient) Close() error {
@@ -24,10 +24,10 @@ func (b *buildkitClient) Close() error {
 
 func New(ctx context.Context, address string) (Client, error) {
 	if address == "" {
-		address = client2.DefaultEndpoint
+		address = k3c.DefaultEndpoint
 	}
 
-	c, err := client2.New(ctx, address)
+	c, err := k3c.New(ctx, address)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func New(ctx context.Context, address string) (Client, error) {
 		address = "unix://" + address
 	}
 
-	client, err := client.New(ctx, address, client.WithFailFast())
+	client, err := bkc.New(ctx, address, bkc.WithFailFast())
 	if err != nil {
 		return nil, err
 	}

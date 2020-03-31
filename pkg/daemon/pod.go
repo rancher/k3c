@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containerd/cri/pkg/constants"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/pborman/uuid"
@@ -90,7 +91,7 @@ func (c *Daemon) CreatePod(ctx context.Context, name string, opts *v1alpha1.PodO
 		Metadata: &pb.PodSandboxMetadata{
 			Name:      name,
 			Uid:       id,
-			Namespace: c.namespace,
+			Namespace: constants.K8sContainerdNamespace,
 		},
 		Hostname:     hostname,
 		LogDirectory: logs,
