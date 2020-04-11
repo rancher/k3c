@@ -171,7 +171,7 @@ func writeConfig(cfg *containerd.Config, path string, cniConf, cniConfList map[s
 			case "k3c":
 				// TODO(dweomer): nothing to do here ... yet
 			case "cri":
-				xfg, ok := p.Config.(*cri.Config)
+				xfg, ok := p.Config.(*cri.PluginConfig)
 				if !ok {
 					return fmt.Errorf("unexpected config type for plugin %q: %T", p.ID, p.Config)
 				}
