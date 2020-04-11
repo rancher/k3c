@@ -11,19 +11,18 @@ var (
 	DefaultCriSandboxImage = "docker.io/rancher/pause:3.1"
 )
 
-func DefaultCriConfig(address, root string) *cri.Config {
-	config := &cri.Config{
-		PluginConfig:       cri.DefaultConfig(),
-		ContainerdEndpoint: address,
-		ContainerdRootDir:  root,
-	}
+func DefaultCriConfig(address, root string) *cri.PluginConfig {
+	// PluginConfig
+	config := cri.DefaultConfig()
+	config.SandboxImage = DefaultCriSandboxImage
+	// .ContainerdConfig
 	config.DefaultRuntimeName = "runc"
 	config.Runtimes = map[string]cri.Runtime{
 		config.DefaultRuntimeName: {Type: plugin.RuntimeRuncV2},
 	}
-	config.CniConfig.NetworkPluginBinDir = filepath.Join(root, "bin")
-	config.CniConfig.NetworkPluginConfDir = filepath.Join(root, "etc", "cni", "net.d")
-	config.CniConfig.NetworkPluginMaxConfNum = 1
-	config.SandboxImage = DefaultCriSandboxImage
-	return config
+	// .CniConfig
+	config.NetworkPluginBinDir = filepath.Join(root, "bin")
+	config.NetworkPluginConfDir = filepath.Join(root, "etc", "cni", "net.d")
+	config.NetworkPluginMaxConfNum = 1
+	return &config
 }
