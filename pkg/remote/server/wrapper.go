@@ -30,7 +30,7 @@ func (w *wrapper) ListPods(ctx context.Context, req *api.ListPodsRequest) (res *
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
-	log.G(ctx).Trace("%+v", req)
+	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
 			log.G(ctx).WithError(err).Error("ListPods failed")
