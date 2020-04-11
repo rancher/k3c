@@ -3,9 +3,11 @@ module github.com/rancher/k3c
 go 1.13
 
 replace (
-	github.com/containerd/containerd => github.com/rancher/containerd v1.3.3-k3s2
-	github.com/containerd/cri => github.com/dweomer/cri v1.11.1-0.20200310230101-bc6bc8f7a60e // k3c
-	github.com/docker/distribution => github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible
+	//github.com/containerd/containerd => github.com/rancher/containerd v1.3.3-k3s2
+	github.com/containerd/containerd => github.com/dweomer/containerd v1.3.4-0.20200313174004-901f9041b0a9 // k3c
+	github.com/containerd/cri => github.com/dweomer/cri v1.11.1-0.20200326163540-dd8a3d57f85d // k3c
+	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20200223014041-6b972e50feee
+	github.com/docker/docker => github.com/docker/docker v1.4.2-0.20200227233006-38f52c9fec82
 	github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
 	github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
 	github.com/moby/buildkit => github.com/dweomer/buildkit v0.6.2-0.20200111044149-7562b84375e4 // k3c
@@ -39,53 +41,50 @@ replace (
 )
 
 require (
-	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/goutils v1.1.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/containerd/aufs v0.0.0-20190114185352-f894a800659b
 	github.com/containerd/console v0.0.0-20191219165238-8375c3424e4d
-	github.com/containerd/containerd v1.3.2
+	github.com/containerd/containerd v1.4.0-0
 	github.com/containerd/cri v1.11.1-0.20191202213601-b1bef15fbeb6
+	github.com/containerd/go-cni v0.0.0-20200107172653-c154a49e2c75 // indirect
 	github.com/containerd/typeurl v0.0.0-20200205145503-b45ef1f1f737
 	github.com/containerd/zfs v0.0.0-20190829050200-2ceb2dbb8154
 	github.com/containernetworking/cni v0.7.1
 	github.com/containernetworking/plugins v0.8.4 // indirect
-	github.com/coreos/go-systemd/v22 v22.0.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v1.4.2-0.20190319215453-e7b5f7dbe98c
-	github.com/docker/go-connections v0.3.0
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.4.0
-	github.com/gofrs/flock v0.7.0
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.3
+	github.com/golang/protobuf v1.3.5
 	github.com/google/uuid v1.1.1
-	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645
 	github.com/huandu/xstrings v1.2.1 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/moby/buildkit v0.0.0
 	github.com/opencontainers/image-spec v1.0.1
-	github.com/opencontainers/runc v1.0.0-rc9
+	github.com/opencontainers/runc v1.0.0-rc9.0.20200221051241-688cf6d43cc4 // indirect
 	github.com/opencontainers/runtime-spec v1.0.2-0.20200307132014-f49fed0d6290 // indirect
-	github.com/opentracing/opentracing-go v0.0.0-20171003133519-1361b9cd60be
 	github.com/pborman/uuid v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman/v2 v2.0.0-20200111044641-76fd7a67396a
 	github.com/rancher/wrangler v0.5.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tchap/go-patricia v2.3.0+incompatible // indirect
-	github.com/uber/jaeger-client-go v0.0.0-20180103221425-e02c85f9069e
 	github.com/urfave/cli v1.22.2
 	github.com/urfave/cli/v2 v2.1.1
-	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+	golang.org/x/net v0.0.0-20200301022130-244492dfa37a // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	google.golang.org/grpc v1.23.1
+	golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527 // indirect
+	google.golang.org/grpc v1.27.1
+	gotest.tools/v3 v3.0.2 // indirect
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v0.17.3
 	k8s.io/cri-api v0.17.3
+	k8s.io/klog v1.0.0
 	k8s.io/kubectl v0.17.3
 	k8s.io/kubernetes v1.17.3
 	sigs.k8s.io/yaml v1.1.0

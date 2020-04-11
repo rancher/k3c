@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rancher/k3c/pkg/log"
@@ -12,7 +11,7 @@ import (
 )
 
 var (
-	Timeout         = 2 * time.Second
+	//Timeout         = 2 * time.Second
 	DefaultEndpoint = "/run/k3c/k3c.sock"
 
 	ErrContainerNotFound = errors.New("container not found")
