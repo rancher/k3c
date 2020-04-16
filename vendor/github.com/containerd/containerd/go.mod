@@ -34,7 +34,7 @@ require (
 	github.com/Microsoft/hcsshim v0.8.7-0.20190820203702-9e921883ac92
 	github.com/containerd/aufs v0.0.0-20190114185352-f894a800659b
 	github.com/containerd/btrfs v0.0.0-20181101203652-af5082808c83
-	github.com/containerd/cgroups v0.0.0-20190717030353-c4b9ac5c7601
+	github.com/containerd/cgroups v0.0.0-20200413225007-9f1c62dddf4b
 	github.com/containerd/console v1.0.0
 	github.com/containerd/continuity v0.0.0-20190815185530-f2a389ac0a02
 	github.com/containerd/cri v1.11.1-0.20200320165605-f864905c93b9
@@ -44,7 +44,7 @@ require (
 	github.com/containerd/ttrpc v1.0.0
 	github.com/containerd/typeurl v1.0.0
 	github.com/containerd/zfs v0.0.0-20190829050200-2ceb2dbb8154
-	github.com/containernetworking/plugins v0.7.6 // indirect; v0.7.6
+	github.com/containernetworking/plugins v0.7.6 // indirect
 	github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v1.4.2-0.20171019062838-86f080cff091 // indirect
@@ -73,10 +73,12 @@ require (
 	github.com/tchap/go-patricia v2.2.6+incompatible // indirect
 	github.com/urfave/cli v1.22.0
 	go.etcd.io/bbolt v1.3.3
+	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d // indirect
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/sys v0.0.0-20191120155948-bd437916bb0e
 	google.golang.org/grpc v1.23.0
+	gopkg.in/yaml.v2 v2.2.8 // indirect
 	gotest.tools v2.2.0+incompatible
 	k8s.io/cri-api v0.16.6 // indirect
 	k8s.io/kubernetes v1.16.6 // indirect
