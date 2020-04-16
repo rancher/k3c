@@ -3,8 +3,8 @@ module github.com/rancher/k3c
 go 1.13
 
 replace (
-	github.com/containerd/containerd => github.com/dweomer/containerd v1.3.4-0.20200411034901-a0136c154c02 // v1.3.3+k3c.1
-	github.com/containerd/cri => github.com/dweomer/cri v1.3.1-0.20200411042212-ad4357754da0 // v1.3.0+k3c.1
+	github.com/containerd/containerd => github.com/dweomer/containerd v1.3.5-0.20200416225531-efdd59c500bf // v1.3.4+k3c.1
+	github.com/containerd/cri => github.com/dweomer/cri v1.3.1-0.20200416231312-e53f7fa8bdb4 // v1.3.0+k3c.2
 	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20200223014041-6b972e50feee
 	github.com/docker/docker => github.com/docker/docker v1.4.2-0.20200227233006-38f52c9fec82
 	github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
@@ -45,7 +45,7 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/containerd/aufs v0.0.0-20190114185352-f894a800659b
 	github.com/containerd/console v1.0.0
-	github.com/containerd/containerd v1.4.0-0
+	github.com/containerd/containerd v1.3.4
 	github.com/containerd/cri v1.11.1-0.20200320165605-f864905c93b9
 	github.com/containerd/go-cni v0.0.0-20200107172653-c154a49e2c75 // indirect
 	github.com/containerd/typeurl v1.0.0
