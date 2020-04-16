@@ -37,11 +37,11 @@ github.com/Microsoft/hcsshim/osversion
 github.com/beorn7/perks/quantile
 # github.com/containerd/aufs v0.0.0-20190114185352-f894a800659b
 github.com/containerd/aufs
-# github.com/containerd/cgroups v0.0.0-20190717030353-c4b9ac5c7601
+# github.com/containerd/cgroups v0.0.0-20200413225007-9f1c62dddf4b
 github.com/containerd/cgroups
 # github.com/containerd/console v1.0.0
 github.com/containerd/console
-# github.com/containerd/containerd v1.4.0-0 => github.com/dweomer/containerd v1.3.4-0.20200411034901-a0136c154c02
+# github.com/containerd/containerd v1.4.0-0 => github.com/dweomer/containerd v1.3.5-0.20200416225531-efdd59c500bf
 github.com/containerd/containerd
 github.com/containerd/containerd/api/events
 github.com/containerd/containerd/api/services/containers/v1
@@ -156,7 +156,7 @@ github.com/containerd/continuity/pathdriver
 github.com/containerd/continuity/proto
 github.com/containerd/continuity/syscallx
 github.com/containerd/continuity/sysx
-# github.com/containerd/cri v1.11.1-0.20200320165605-f864905c93b9 => github.com/dweomer/cri v1.3.1-0.20200411042212-ad4357754da0
+# github.com/containerd/cri v1.11.1-0.20200320165605-f864905c93b9 => github.com/dweomer/cri v1.3.1-0.20200416231312-e53f7fa8bdb4
 github.com/containerd/cri
 github.com/containerd/cri/pkg/annotations
 github.com/containerd/cri/pkg/api/runtimeoptions/v1

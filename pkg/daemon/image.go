@@ -8,8 +8,10 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/cri"
+	"github.com/containerd/cri/pkg/constants"
 	"github.com/containerd/cri/pkg/server"
 	"github.com/docker/distribution/reference"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -71,7 +73,7 @@ func (c *Daemon) resolveImage(ctx context.Context, image string) (images.Image, 
 	}
 
 	imageService := c.cClient.ImageService()
-	return imageService.Get(ctx, img.Digests[0])
+	return imageService.Get(namespaces.WithNamespace(ctx, constants.K8sContainerdNamespace), img.Digests[0])
 }
 
 func (c *Daemon) TagImage(ctx context.Context, image string, tags ...string) error {
@@ -89,7 +91,7 @@ func (c *Daemon) TagImage(ctx context.Context, image string, tags ...string) err
 
 		cImage.Name = normalized.String()
 		// Attempt to create the image first
-		if _, err = imageService.Create(ctx, cImage); err != nil {
+		if _, err = imageService.Create(namespaces.WithNamespace(ctx, constants.K8sContainerdNamespace), cImage); err != nil {
 			return err
 		}
 	}
@@ -115,11 +117,6 @@ func (c *Daemon) GetImage(ctx context.Context, image string) (*client.Image, err
 }
 
 func (c *Daemon) PullProgress(ctx context.Context, image string) (<-chan []status.Info, error) {
-	done, err := c.imagePulled(ctx, image)
-	if err != nil || done {
-		return nil, err
-	}
-
 	result := make(chan []status.Info)
 	go func() {
 		t := time.NewTicker(time.Millisecond * 250)
@@ -167,7 +164,7 @@ func (c *Daemon) imageProgress(ctx context.Context, image string) (result []stat
 		return nil, true, nil
 	}
 
-	statuses, err := c.cClient.ContentStore().ListStatuses(ctx)
+	statuses, err := c.cClient.ContentStore().ListStatuses(namespaces.WithNamespace(ctx, constants.K8sContainerdNamespace), "")
 	if err != nil {
 		return nil, false, err
 	}
@@ -267,7 +264,7 @@ func (c *Daemon) PushImage(ctx context.Context, image string, authConfig *client
 		return nil, nil
 	})
 
-	return c.cClient.Push(ctx, cImage.Name, cImage.Target,
+	return c.cClient.Push(namespaces.WithNamespace(ctx, constants.K8sContainerdNamespace), cImage.Name, cImage.Target,
 		containerd.WithResolver(resolver),
 		containerd.WithImageHandler(jobHandler),
 	)
