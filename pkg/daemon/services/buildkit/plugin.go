@@ -1,7 +1,6 @@
 package buildkit
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/containerd/containerd/log"
@@ -21,13 +20,15 @@ import (
 	"github.com/moby/buildkit/solver/bboltcachestorage"
 	"github.com/moby/buildkit/worker"
 	"github.com/moby/buildkit/worker/base"
+	"github.com/rancher/k3c/pkg/daemon/config"
 )
 
 var (
+	Config             = config.DefaultBuildkitConfig()
 	PluginRegistration = plugin.Registration{
 		ID:     "buildkit",
 		Type:   plugin.GRPCPlugin,
-		Config: &buildkit.Config{},
+		Config: Config,
 		Requires: []plugin.Type{
 			plugin.RuntimePlugin,
 			plugin.ServicePlugin,
@@ -37,25 +38,25 @@ var (
 )
 
 func PluginInitFunc(ic *plugin.InitContext) (interface{}, error) {
-	ctx := ic.Context
-	log.G(ctx).WithField(
+	log.G(ic.Context).WithField(
 		"address", ic.Address,
 	).WithField(
 		"root", ic.Root,
 	).WithField(
 		"state", ic.State,
-	).Info("Init BuildKit Plugin")
-
+	).Info("BuildKit init")
 	cfg := ic.Config.(*buildkit.Config)
-	log.G(ctx).Debugf("Init BuildKit Plugin with config %+v", cfg)
-
-	ic.Meta.Exports["root"] = ic.Root
-	ic.Meta.Platforms = append(ic.Meta.Platforms, platforms.DefaultSpec())
-
-	if err := os.MkdirAll(ic.Root, 0711); err != nil {
-		return nil, err
-	}
+	cfg.Workers.Containerd.Address = ic.Address
 	cfg.Root = ic.Root
+	log.G(ic.Context).Debugf("BuildKit config %+v", *cfg)
+
+	// exports
+	ic.Meta.Exports["root"] = cfg.Root
+
+	// platforms
+	if len(ic.Meta.Platforms) == 0 {
+		ic.Meta.Platforms = append(ic.Meta.Platforms, platforms.DefaultSpec())
+	}
 
 	controllerOpt := control.Opt{
 		WorkerController: &worker.Controller{},

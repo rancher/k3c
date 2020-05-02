@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containerd/cri/pkg/constants"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/pborman/uuid"
@@ -91,7 +90,7 @@ func (c *Daemon) CreatePod(ctx context.Context, name string, opts *v1alpha1.PodO
 		Metadata: &pb.PodSandboxMetadata{
 			Name:      name,
 			Uid:       id,
-			Namespace: constants.K8sContainerdNamespace,
+			Namespace: "k3c",
 		},
 		Hostname:     hostname,
 		LogDirectory: logs,
@@ -123,7 +122,7 @@ func (c *Daemon) CreatePod(ctx context.Context, name string, opts *v1alpha1.PodO
 		return "", err
 	}
 
-	pod, err := c.runtime.RunPodSandbox(ctx, &pb.RunPodSandboxRequest{
+	pod, err := c.crt.RunPodSandbox(ctx, &pb.RunPodSandboxRequest{
 		Config:         config,
 		RuntimeHandler: opts.Runtime,
 	})
@@ -165,7 +164,7 @@ func (c *Daemon) ListPods(ctx context.Context) ([]v1.Pod, error) {
 }
 
 func (c *Daemon) gc(ctx context.Context) {
-	for c.gcKick.Kicked() {
+	for c.gck.Kicked() {
 		if err := c.runGC(ctx); err != nil {
 			logrus.Errorf("failed to run pod GC: %v", err)
 			time.Sleep(5 * time.Second)
@@ -175,7 +174,7 @@ func (c *Daemon) gc(ctx context.Context) {
 }
 
 func (c *Daemon) runGC(ctx context.Context) error {
-	resp, err := c.runtime.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{})
+	resp, err := c.crt.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{})
 	if err != nil {
 		return err
 	}
@@ -185,17 +184,17 @@ func (c *Daemon) runGC(ctx context.Context) error {
 		pods[pod.Id] = 0
 	}
 
-	cResp, err := c.runtime.ListContainers(ctx, &pb.ListContainersRequest{})
+	cResp, err := c.crt.ListContainers(ctx, &pb.ListContainersRequest{})
 	if err != nil {
 		return err
 	}
 
 	for _, container := range cResp.Containers {
 		if _, _, err := getContainerConfig(container); err != nil {
-			c.runtime.StopContainer(ctx, &pb.StopContainerRequest{
+			c.crt.StopContainer(ctx, &pb.StopContainerRequest{
 				ContainerId: container.Id,
 			})
-			c.runtime.RemoveContainer(ctx, &pb.RemoveContainerRequest{
+			c.crt.RemoveContainer(ctx, &pb.RemoveContainerRequest{
 				ContainerId: container.Id,
 			})
 		} else {
@@ -209,7 +208,7 @@ func (c *Daemon) runGC(ctx context.Context) error {
 	for podID, count := range pods {
 		if count == 0 {
 			logrus.Infof("Removing pod %s", podID)
-			_, err := c.runtime.StopPodSandbox(ctx, &pb.StopPodSandboxRequest{
+			_, err := c.crt.StopPodSandbox(ctx, &pb.StopPodSandboxRequest{
 				PodSandboxId: podID,
 			})
 			if err != nil {
@@ -218,7 +217,7 @@ func (c *Daemon) runGC(ctx context.Context) error {
 				continue
 			}
 
-			_, err = c.runtime.RemovePodSandbox(ctx, &pb.RemovePodSandboxRequest{
+			_, err = c.crt.RemovePodSandbox(ctx, &pb.RemovePodSandboxRequest{
 				PodSandboxId: podID,
 			})
 			if err != nil {
@@ -234,7 +233,7 @@ func (c *Daemon) runGC(ctx context.Context) error {
 func (c *Daemon) listPods(ctx context.Context, network bool) ([]v1.Pod, error) {
 	pods := map[string]*podData{}
 
-	resp, err := c.runtime.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{})
+	resp, err := c.crt.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +245,7 @@ func (c *Daemon) listPods(ctx context.Context, network bool) ([]v1.Pod, error) {
 		}
 	}
 
-	containers, err := c.runtime.ListContainers(ctx, &pb.ListContainersRequest{})
+	containers, err := c.crt.ListContainers(ctx, &pb.ListContainersRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +255,7 @@ func (c *Daemon) listPods(ctx context.Context, network bool) ([]v1.Pod, error) {
 		if !ok {
 			continue
 		}
-		resp, err := c.runtime.ContainerStatus(ctx, &pb.ContainerStatusRequest{
+		resp, err := c.crt.ContainerStatus(ctx, &pb.ContainerStatusRequest{
 			ContainerId: container.Id,
 			Verbose:     true,
 		})

@@ -17,6 +17,7 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"io"
 	"os"
 	"time"
@@ -27,8 +28,6 @@ import (
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/plugin"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 
 	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
@@ -110,7 +109,7 @@ func (c *criService) StartContainer(ctx context.Context, r *runtime.StartContain
 	}
 	defer func() {
 		if retErr != nil {
-			deferCtx, deferCancel := ctrdutil.DeferContext()
+			deferCtx, deferCancel := ctrdutil.DeferContext(c.name)
 			defer deferCancel()
 			// It's possible that task is deleted by event monitor.
 			if _, err := task.Delete(deferCtx, containerd.WithProcessKill); err != nil && !errdefs.IsNotFound(err) {
@@ -120,7 +119,7 @@ func (c *criService) StartContainer(ctx context.Context, r *runtime.StartContain
 	}()
 
 	// wait is a long running background request, no timeout needed.
-	exitCh, err := task.Wait(ctrdutil.NamespacedContext())
+	exitCh, err := task.Wait(ctrdutil.NamespacedContext(c.name))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to wait for containerd task")
 	}
@@ -142,7 +141,7 @@ func (c *criService) StartContainer(ctx context.Context, r *runtime.StartContain
 	// start the monitor after updating container state, this ensures that
 	// event monitor receives the TaskExit event and update container state
 	// after this.
-	c.eventMonitor.startExitMonitor(context.Background(), id, task.Pid(), exitCh)
+	c.eventMonitor.startExitMonitor(ctrdutil.NamespacedContext(c.name), id, task.Pid(), exitCh)
 
 	return &runtime.StartContainerResponse{}, nil
 }
@@ -203,7 +202,7 @@ func (c *criService) createContainerLoggers(logPath string, tty bool) (stdout io
 			if stderrCh != nil {
 				<-stderrCh
 			}
-			logrus.Debugf("Finish redirecting log file %q, closing it", logPath)
+			log.L.WithField("ns", c.name).Debugf("Finish redirecting log file %q, closing it", logPath)
 			f.Close()
 		}()
 	} else {

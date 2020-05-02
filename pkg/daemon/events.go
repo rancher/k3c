@@ -11,7 +11,7 @@ import (
 )
 
 func (d *Daemon) Events(ctx context.Context) (<-chan status.Event, error) {
-	events, errs := d.cClient.EventService().Subscribe(ctx)
+	events, errs := d.ctd.EventService().Subscribe(ctx)
 	result := make(chan status.Event)
 
 	// consume and drop errs

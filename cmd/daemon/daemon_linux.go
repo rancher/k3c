@@ -1,21 +1,17 @@
 package daemon
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/rancher/k3c/pkg/daemon/services/buildkit"
+
 	"github.com/containerd/containerd/cmd/containerd/command"
-	"github.com/containerd/containerd/pkg/timeout"
 	"github.com/containerd/containerd/plugin"
-	containerd "github.com/containerd/containerd/services/server/config"
-	cri "github.com/containerd/cri/pkg/config"
-	buildkit "github.com/moby/buildkit/cmd/buildkitd/config"
-	"github.com/pkg/errors"
 	"github.com/rancher/k3c/pkg/daemon"
 	"github.com/rancher/k3c/pkg/daemon/config"
-	bkplugin "github.com/rancher/k3c/pkg/daemon/services/buildkit"
+	k3c "github.com/rancher/k3c/pkg/defaults"
 	"github.com/sirupsen/logrus"
 	cliv1 "github.com/urfave/cli"
 	cliv2 "github.com/urfave/cli/v2"
@@ -41,6 +37,7 @@ the backend to support the Docker work-alike frontend of k3c.`
 		case "address,a":
 			if sf, ok := flag.(cliv1.StringFlag); ok {
 				sf.Value = filepath.Join(config.DefaultDaemonStateDir, "k3c.sock")
+				sf.EnvVar = "K3C_ADDRESS"
 				app.Flags[i] = sf
 			} else {
 				logrus.Warnf("unexpected type for flag %q = %#v", flag.GetName(), flag)
@@ -48,6 +45,7 @@ the backend to support the Docker work-alike frontend of k3c.`
 		case "config,c":
 			if sf, ok := flag.(cliv1.StringFlag); ok {
 				sf.Value = config.DefaultDaemonConfigFile
+				sf.EnvVar = "K3C_CONFIG"
 				app.Flags[i] = sf
 			} else {
 				logrus.Warnf("unexpected type for flag %q = %#v", flag.GetName(), flag)
@@ -55,6 +53,7 @@ the backend to support the Docker work-alike frontend of k3c.`
 		case "root":
 			if sf, ok := flag.(cliv1.StringFlag); ok {
 				sf.Value = config.DefaultDaemonRootDir
+				sf.EnvVar = "K3C_ROOT"
 				app.Flags[i] = sf
 			} else {
 				logrus.Warnf("unexpected type for flag %q = %#v", flag.GetName(), flag)
@@ -62,69 +61,103 @@ the backend to support the Docker work-alike frontend of k3c.`
 		case "state":
 			if sf, ok := flag.(cliv1.StringFlag); ok {
 				sf.Value = config.DefaultDaemonStateDir
+				sf.EnvVar = "K3C_STATE"
 				app.Flags[i] = sf
 			} else {
 				logrus.Warnf("unexpected type for flag %q = %#v", flag.GetName(), flag)
 			}
 		}
 	}
+	app.Flags = append(app.Flags, []cliv1.Flag{
+		cliv1.StringFlag{
+			Name:        "bridge-name",
+			Value:       config.DefaultBridgeName,
+			EnvVar:      "K3C_BRIDGE_NAME",
+			Destination: &daemon.Config.BridgeName,
+		},
+		cliv1.StringFlag{
+			Name:        "bridge-cidr",
+			Value:       config.DefaultBridgeCIDR,
+			EnvVar:      "K3C_BRIDGE_CIDR",
+			Destination: &daemon.Config.BridgeCIDR,
+		},
+		cliv1.BoolFlag{
+			Name:        "bootstrap-skip",
+			EnvVar:      "K3C_BOOTSTRAP_SKIP",
+			Usage:       "skip bootstrap install (default: false)",
+			Destination: &daemon.Config.BootstrapSkip,
+		},
+		cliv1.StringFlag{
+			Name:        "bootstrap-image",
+			Value:       config.DefaultBootstrapImage,
+			EnvVar:      "K3C_BOOTSTRAP_IMAGE",
+			Usage:       "containerd-style image ref to install",
+			Destination: &daemon.Config.BootstrapImage,
+		},
+		cliv1.StringFlag{
+			Name:        "bootstrap-namespace",
+			Value:       config.DefaultBootstrapNamespace,
+			EnvVar:      "K3C_BOOTSTRAP_NAMESPACE",
+			Destination: &daemon.Config.BootstrapNamespace,
+			Hidden:      true,
+		},
+		cliv1.StringFlag{
+			Name:        "sandbox-image",
+			Value:       config.DefaultSandboxImage,
+			EnvVar:      "K3C_SANDBOX_IMAGE",
+			Usage:       "containerd-style image ref for sandboxes",
+			Destination: &daemon.Config.Namespace.SandboxImage,
+		},
+	}...)
 
 	app.Before = func(before cliv1.BeforeFunc) cliv1.BeforeFunc {
 		return func(clx *cliv1.Context) error {
-			var (
-				root    = clx.GlobalString("root")
-				state   = clx.GlobalString("state")
-				address = clx.GlobalString("address")
-				file    = clx.GlobalString("config")
-				conf    = config.DefaultContainerdConfig(root, state, address)
-			)
-			// sidestep the merge during containerd.LoadConfig
-			required := conf.RequiredPlugins
-			conf.RequiredPlugins = nil
-			if err := containerd.LoadConfig(file, conf); err != nil {
-				if !os.IsNotExist(err) {
-					return err
+			// setup env
+			for i := range clx.App.Flags {
+				var (
+					f = clx.App.Flags[i]
+					n = f.GetName()
+					e string
+				)
+				switch t := f.(type) {
+				case cliv1.BoolFlag:
+					e = t.EnvVar
+				case cliv1.StringFlag:
+					e = t.EnvVar
 				}
-				conf.RequiredPlugins = required
+				if e != "" {
+					if err := os.Setenv(e, clx.GlobalString(n)); err != nil {
+						return err
+					}
+				}
 			}
-			if conf.Version == 1 {
-				return fmt.Errorf("unsupported configuration version: %d", conf.Version)
-			}
-			if err := os.Setenv("K3C_ADDRESS", conf.GRPC.Address); err != nil {
-				logrus.Warn(err)
-			}
-			if err := os.Setenv("K3C_ROOT", conf.Root); err != nil {
-				logrus.Warn(err)
-			}
-			if err := os.Setenv("K3C_STATE", conf.State); err != nil {
-				logrus.Warn(err)
-			}
-			k3cfg := config.DefaultK3Config()
-			err := writeConfig(conf, file, config.DefaultCniConf(k3cfg), config.DefaultCniConflist(k3cfg),
-				&plugin.Registration{
-					ID:     daemon.PluginRegistration.ID,
-					Type:   plugin.GRPCPlugin,
-					Config: k3cfg,
-				},
-				&plugin.Registration{
-					ID:     "cri",
-					Type:   plugin.GRPCPlugin,
-					Config: config.DefaultCriConfig(address, root),
-				},
-				&plugin.Registration{
-					ID:     bkplugin.PluginRegistration.ID,
-					Type:   plugin.GRPCPlugin,
-					Config: config.DefaultBuildkitConfig(address, root),
-				},
-				&plugin.Registration{
-					ID:     "opt",
-					Type:   plugin.InternalPlugin,
-					Config: config.DefaultOptConfig(root),
-				},
+			// setup cfg
+			var (
+				root = clx.GlobalString("root")
+				path = filepath.Join(clx.GlobalString("root"), fmt.Sprintf("%s.cri", plugin.GRPCPlugin), "namespaces", k3c.DefaultNamespace, "config.toml")
 			)
-			if err != nil {
+			daemon.Config.Namespace.NetworkPluginBinDir = filepath.Join(root, "bin")
+			daemon.Config.Namespace.NetworkPluginConfDir = filepath.Join(root, "etc", "cni", "net.d")
+			buildkit.Config.Workers.Containerd.NetworkConfig.Mode = "cni"
+			buildkit.Config.Workers.Containerd.NetworkConfig.CNIBinaryPath = filepath.Join(root, "bin")
+			buildkit.Config.Workers.Containerd.NetworkConfig.CNIConfigPath = filepath.Join(root, "etc", "cni", "net.d", "90-k3c.json")
+
+			if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 				return err
 			}
+			if err := config.WriteFileToml(path, &daemon.Config.Namespace, 0600); err != nil {
+				return err
+			}
+			if err := os.MkdirAll(daemon.Config.Namespace.NetworkPluginConfDir, 0700); err != nil {
+				return err
+			}
+			if err := config.WriteFileJson(buildkit.Config.Workers.Containerd.NetworkConfig.CNIConfigPath, config.DefaultCniConf(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
+				return err
+			}
+			if err := config.WriteFileJson(filepath.Join(daemon.Config.Namespace.NetworkPluginConfDir, "90-k3c.conflist"), config.DefaultCniConflist(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
+				return err
+			}
+
 			if before != nil {
 				return before(clx)
 			}
@@ -149,86 +182,4 @@ the backend to support the Docker work-alike frontend of k3c.`
 			return app.Run(args)
 		},
 	}
-}
-
-func writeConfig(cfg *containerd.Config, path string, cniConf, cniConfList map[string]interface{}, plugins ...*plugin.Registration) error {
-	config := &command.Config{
-		Config:  cfg,
-		Plugins: make(map[string]interface{}, len(plugins)),
-	}
-	if len(plugins) != 0 {
-		config.Plugins = make(map[string]interface{})
-		for _, p := range plugins {
-			if p.Config == nil {
-				continue
-			}
-			pc, err := config.Decode(p)
-			if err != nil {
-				return err
-			}
-			config.Plugins[p.URI()] = pc
-			switch p.ID {
-			case "k3c":
-				// TODO(dweomer): nothing to do here ... yet
-			case "cri":
-				xfg, ok := p.Config.(*cri.PluginConfig)
-				if !ok {
-					return fmt.Errorf("unexpected config type for plugin %q: %T", p.ID, p.Config)
-				}
-				if err := os.MkdirAll(xfg.CniConfig.NetworkPluginConfDir, 0700); err != nil {
-					return errors.Wrapf(err, "mkdir %s", xfg.CniConfig.NetworkPluginConfDir)
-				}
-				if err := jsonEncodeThenClose(filepath.Join(xfg.CniConfig.NetworkPluginConfDir, "90-k3c.conflist"), cniConfList); err != nil {
-					return err
-				}
-			case "buildkit":
-				xfg, ok := p.Config.(*buildkit.Config)
-				if !ok {
-					return fmt.Errorf("unexpected config type for plugin %q: %T", p.ID, p.Config)
-				}
-				if err := os.MkdirAll(filepath.Dir(xfg.Workers.Containerd.CNIConfigPath), 0700); err != nil {
-					return errors.Wrapf(err, "mkdir %s", filepath.Dir(xfg.Workers.Containerd.CNIConfigPath))
-				}
-				if err := jsonEncodeThenClose(xfg.Workers.Containerd.CNIConfigPath, cniConf); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	timeouts := timeout.All()
-	config.Timeouts = make(map[string]string)
-	for k, v := range timeouts {
-		config.Timeouts[k] = v.String()
-	}
-
-	// for the time being, keep the defaultConfig's version set at 1 so that
-	// when a config without a version is loaded from disk and has no version
-	// set, we assume it's a v1 config.  But when generating new configs via
-	// this command, generate the v2 config
-	config.Config.Version = 2
-
-	// remove overridden Plugins type to avoid duplication in output
-	config.Config.Plugins = nil
-
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return errors.Wrapf(err, "mkdir %s", filepath.Dir(path))
-	}
-	w, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-	_, err = config.WriteTo(w)
-	return err
-}
-
-func jsonEncodeThenClose(path string, data interface{}) error {
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return json.NewEncoder(file).Encode(data)
-
 }

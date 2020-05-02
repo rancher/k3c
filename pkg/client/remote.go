@@ -5,6 +5,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/rancher/k3c/pkg/defaults"
 	"github.com/rancher/k3c/pkg/endpointconn"
 	"github.com/rancher/k3c/pkg/log"
 	pb "github.com/rancher/k3c/pkg/remote/apis/k3c/v1alpha1"
@@ -22,7 +23,7 @@ type client struct {
 
 func New(ctx context.Context, endpoint string) (Client, error) {
 	if endpoint == "" {
-		endpoint = DefaultEndpoint
+		endpoint = defaults.DefaultAddress
 	}
 
 	conn, err := endpointconn.Get(ctx, endpoint, grpc.WithInsecure(), grpc.WithBlock(), grpc.FailOnNonTempDialError(true))

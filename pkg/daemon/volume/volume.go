@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rancher/k3c/pkg/client"
+	"github.com/rancher/k3c/pkg/daemon/config"
 	"k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 )
 
@@ -25,9 +26,8 @@ const (
 )
 
 var (
-	DefaultVolumeDir = "/var/lib/rancher/k3c/volumes"
-	re               = regexp.MustCompile("^[-a-zA-Z0-9]+$")
-	hexRe            = regexp.MustCompile("^[a-f0-9]{32}$")
+	re    = regexp.MustCompile("^[-a-zA-Z0-9]+$")
+	hexRe = regexp.MustCompile("^[a-f0-9]{32}$")
 )
 
 type Manager struct {
@@ -41,7 +41,7 @@ func New(baseDir string) (*Manager, error) {
 }
 
 func PathToType(name string) (string, Volume) {
-	if strings.HasPrefix(name, DefaultVolumeDir) {
+	if strings.HasPrefix(name, config.DefaultVolumesDir) {
 		name = filepath.Base(name)
 		if hexRe.MatchString(name) {
 			return name, Ephemeral

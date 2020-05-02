@@ -154,7 +154,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	}
 
 	// Create sandbox container.
-	spec, err := c.generateSandboxContainerSpec(id, config, &image.ImageSpec.Config, sandbox.NetNSPath, ociRuntime.PodAnnotations)
+	spec, err := c.generateSandboxContainerSpec(ctx, id, config, &image.ImageSpec.Config, sandbox.NetNSPath, ociRuntime.PodAnnotations)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate sandbox container spec")
 	}
@@ -193,7 +193,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	seccompSpecOpts, err := generateSeccompSpecOpts(
 		securityContext.GetSeccompProfilePath(),
 		securityContext.GetPrivileged(),
-		c.seccompEnabled)
+		c.seccompEnabled())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate seccomp spec opts")
 	}
@@ -203,7 +203,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 
 	sandboxLabels := buildLabels(config.Labels, containerKindSandbox)
 
-	runtimeOpts, err := generateRuntimeOptions(ociRuntime, c.config)
+	runtimeOpts, err := generateRuntimeOptions(ociRuntime, c.config.PluginConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate runtime options")
 	}
@@ -221,7 +221,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	}
 	defer func() {
 		if retErr != nil {
-			deferCtx, deferCancel := ctrdutil.DeferContext()
+			deferCtx, deferCancel := ctrdutil.DeferContext(c.name)
 			defer deferCancel()
 			if err := container.Delete(deferCtx, containerd.WithSnapshotCleanup); err != nil {
 				log.G(ctx).WithError(err).Errorf("Failed to delete containerd container %q", id)
@@ -294,7 +294,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	}
 	defer func() {
 		if retErr != nil {
-			deferCtx, deferCancel := ctrdutil.DeferContext()
+			deferCtx, deferCancel := ctrdutil.DeferContext(c.name)
 			defer deferCancel()
 			// Cleanup the sandbox container if an error is returned.
 			if _, err := task.Delete(deferCtx, containerd.WithProcessKill); err != nil && !errdefs.IsNotFound(err) {
@@ -304,7 +304,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	}()
 
 	// wait is a long running background request, no timeout needed.
-	exitCh, err := task.Wait(ctrdutil.NamespacedContext())
+	exitCh, err := task.Wait(ctrdutil.NamespacedContext(c.name))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to wait for sandbox container task")
 	}
@@ -340,7 +340,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	return &runtime.RunPodSandboxResponse{PodSandboxId: id}, nil
 }
 
-func (c *criService) generateSandboxContainerSpec(id string, config *runtime.PodSandboxConfig,
+func (c *criService) generateSandboxContainerSpec(ctx context.Context, id string, config *runtime.PodSandboxConfig,
 	imageConfig *imagespec.ImageConfig, nsPath string, runtimePodAnnotations []string) (retSpec *runtimespec.Spec, retErr error) {
 	// Creates a spec Generator with the default spec.
 	// TODO(random-liu): [P1] Compare the default settings with docker and containerd default.
@@ -454,7 +454,7 @@ func (c *criService) generateSandboxContainerSpec(id string, config *runtime.Pod
 		customopts.WithAnnotation(annotations.SandboxLogDir, config.GetLogDirectory()),
 	)
 
-	return runtimeSpec(id, specOpts...)
+	return runtimeSpec(ctx, id, specOpts...)
 }
 
 // setupSandboxFiles sets up necessary sandbox files including /dev/shm, /etc/hosts,

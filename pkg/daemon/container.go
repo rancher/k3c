@@ -54,7 +54,7 @@ func (c *Daemon) Exec(ctx context.Context, containerName string, cmd []string, o
 		Stderr:      !opts.Tty,
 	}
 
-	resp, err := c.runtime.Exec(ctx, req)
+	resp, err := c.crt.Exec(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (c *Daemon) LogContainer(ctx context.Context, containerID string, opts *v1.
 		return nil, err
 	}
 
-	containers, err := c.runtime.ListContainers(ctx, &pb.ListContainersRequest{
+	containers, err := c.crt.ListContainers(ctx, &pb.ListContainersRequest{
 		Filter: &pb.ContainerFilter{
 			Id: containerID,
 		},
@@ -93,7 +93,7 @@ func (c *Daemon) LogContainer(ctx context.Context, containerID string, opts *v1.
 		return nil, err
 	}
 
-	pods, err := c.runtime.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{
+	pods, err := c.crt.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{
 		Filter: &pb.PodSandboxFilter{
 			Id: containers.Containers[0].PodSandboxId,
 		},
@@ -120,7 +120,7 @@ func (c *Daemon) LogContainer(ctx context.Context, containerID string, opts *v1.
 		defer close(result)
 		err := logs.ReadLogs(ctx, logPath, containerID, logOpts, &wrapper{
 			ctx: ctx,
-			svc: c.runtime,
+			svc: c.crt,
 		}, &chanWriter{
 			stderr: false,
 			c:      result,
@@ -158,7 +158,7 @@ func (c *Daemon) Attach(ctx context.Context, name string, opts *v1alpha1.AttachO
 		request.Stdin = false
 	}
 
-	resp, err := c.runtime.Attach(ctx, request)
+	resp, err := c.crt.Attach(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -192,13 +192,13 @@ func (c *Daemon) GetContainer(ctx context.Context, name string) (*v1.Pod, *v1.Co
 }
 
 func (c *Daemon) RemoveContainer(ctx context.Context, containerID string) error {
-	defer c.gcKick.Kick()
+	defer c.gck.Kick()
 
 	_, _, containerID, err := c.GetContainer(ctx, containerID)
 	if err != nil {
 		return err
 	}
-	_, err = c.runtime.RemoveContainer(ctx, &pb.RemoveContainerRequest{
+	_, err = c.crt.RemoveContainer(ctx, &pb.RemoveContainerRequest{
 		ContainerId: containerID,
 	})
 
@@ -210,7 +210,7 @@ func (c *Daemon) StartContainer(ctx context.Context, containerID string) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.runtime.StartContainer(ctx, &pb.StartContainerRequest{
+	_, err = c.crt.StartContainer(ctx, &pb.StartContainerRequest{
 		ContainerId: containerID,
 	})
 	return err
@@ -221,7 +221,7 @@ func (c *Daemon) StopContainer(ctx context.Context, containerID string, timeout 
 	if err != nil {
 		return err
 	}
-	_, err = c.runtime.StopContainer(ctx, &pb.StopContainerRequest{
+	_, err = c.crt.StopContainer(ctx, &pb.StopContainerRequest{
 		ContainerId: containerID,
 		Timeout:     timeout,
 	})
@@ -230,7 +230,7 @@ func (c *Daemon) StopContainer(ctx context.Context, containerID string, timeout 
 
 func (c *Daemon) resolveMounts(ctx context.Context, mounts []*pb.Mount) (result []*pb.Mount, err error) {
 	for _, m := range mounts {
-		m, err := c.Setup(ctx, m)
+		m, err := c.vol.Setup(ctx, m)
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +244,7 @@ func (c *Daemon) CreateContainer(ctx context.Context, podID, image string, opts 
 		opts = &v1alpha1.ContainerOptions{}
 	}
 
-	pods, err := c.runtime.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{
+	pods, err := c.crt.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{
 		Filter: &pb.PodSandboxFilter{
 			Id: podID,
 		},
@@ -340,7 +340,7 @@ func (c *Daemon) CreateContainer(ctx context.Context, podID, image string, opts 
 		return "", err
 	}
 
-	container, err := c.runtime.CreateContainer(ctx, &pb.CreateContainerRequest{
+	container, err := c.crt.CreateContainer(ctx, &pb.CreateContainerRequest{
 		PodSandboxId:  podID,
 		Config:        config,
 		SandboxConfig: podConfig,

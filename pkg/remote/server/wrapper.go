@@ -23,7 +23,7 @@ func (w *wrapper) checkInitialized() error {
 	if w.svc.initialized.IsSet() {
 		return nil
 	}
-	return errors.New("server is not initialized yet")
+	return errors.New("server not initialized")
 }
 
 func (w *wrapper) ListPods(ctx context.Context, req *api.ListPodsRequest) (res *api.ListPodsResponse, err error) {

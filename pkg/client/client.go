@@ -11,8 +11,6 @@ import (
 )
 
 var (
-	DefaultEndpoint = "/run/k3c/k3c.sock"
-
 	ErrContainerNotFound = errors.New("container not found")
 	ErrImageNotFound     = errors.New("image not found")
 )

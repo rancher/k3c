@@ -2,7 +2,7 @@ package daemon
 
 import (
 	"context"
-	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/containerd/containerd"
@@ -17,129 +17,146 @@ import (
 	"github.com/containerd/containerd/log"
 	cns "github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/plugin"
+	"github.com/containerd/containerd/remotes"
+	"github.com/containerd/containerd/remotes/docker"
 	"github.com/containerd/containerd/services"
 	"github.com/containerd/containerd/snapshots"
-	"github.com/containerd/cri/pkg/constants"
+	"github.com/containerd/cri/pkg/server"
 	"github.com/pkg/errors"
+	"github.com/rancher/k3c/pkg/client"
 	"github.com/rancher/k3c/pkg/daemon/config"
 	"github.com/rancher/k3c/pkg/daemon/volume"
-	"github.com/rancher/k3c/pkg/endpointconn"
+	k3c "github.com/rancher/k3c/pkg/defaults"
 	"github.com/rancher/k3c/pkg/kicker"
 	"github.com/rancher/k3c/pkg/pushstatus"
-	"google.golang.org/grpc"
 	criv1 "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 )
 
 type Daemon struct {
-	*volume.Manager
+	ctd *containerd.Client
+	crt criv1.RuntimeServiceServer
+	img criv1.ImageServiceServer
+	vol *volume.Manager
 
-	logPath string
-	cClient *containerd.Client
-	runtime criv1.RuntimeServiceClient
-	image   criv1.ImageServiceClient
-	gcKick  kicker.Kicker
-
+	logPath  string
+	gck      kicker.Kicker
 	lock     sync.Mutex
 	pushJobs map[string]pushstatus.Tracker
+	tracker  docker.StatusTracker
+
+	getResolver func(context.Context, *client.AuthConfig) (remotes.Resolver, error)
 }
 
-func (c *Daemon) Start(ctx context.Context, cfg config.K3Config, address string) error {
-	conn, err := endpointconn.Get(ctx, address, grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		return err
-	}
-	ccontainerdClient, err := containerd.NewWithConn(conn, containerd.WithDefaultNamespace(constants.K8sContainerdNamespace))
-	if err != nil {
-		return err
-	}
-	c.cClient = ccontainerdClient
-	c.runtime = criv1.NewRuntimeServiceClient(conn)
-	c.image = criv1.NewImageServiceClient(conn)
+func (c *Daemon) CreateVolume(ctx context.Context, name string) (*client.Volume, error) {
+	return c.vol.CreateVolume(ctx, name)
+}
 
-	volManager, err := volume.New(cfg.Volumes)
+func (c *Daemon) ListVolumes(ctx context.Context) ([]client.Volume, error) {
+	return c.vol.ListVolumes(ctx)
+}
+
+func (c *Daemon) RemoveVolume(ctx context.Context, name string, force bool) error {
+	return c.vol.RemoveVolume(ctx, name, force)
+}
+
+func (c *Daemon) start(ic *plugin.InitContext) error {
+	var (
+		ctx = cns.WithNamespace(ic.Context, k3c.DefaultNamespace)
+	)
+	plugins, err := ic.GetByType(plugin.GRPCPlugin)
 	if err != nil {
-		defer c.Close()
 		return err
 	}
-	c.Manager = volManager
+	criPlugin, ok := plugins["cri"]
+	if !ok {
+		return errors.New("cannot find CRI plugin")
+	}
+	criService, err := criPlugin.Instance()
+	if err != nil {
+		return err
+	}
+
+	svc, ok := criService.(server.CRIService)
+	if !ok {
+		return errors.Errorf("unexpected instance type %T", criService)
+	}
+	c.getResolver = func(ctx context.Context, authConfig *client.AuthConfig) (remotes.Resolver, error) {
+		return svc.GetResolver(ctx, toAuth(authConfig), c.tracker)
+	}
+	c.crt = svc
+	c.img = svc
+	c.gck = kicker.New(ctx, true)
+	c.vol, err = volume.New(ic.Config.(*config.K3Config).Volumes)
+	if err != nil {
+		return err
+	}
+
 	go c.gc(ctx)
+
 	return nil
 }
 
-func (c *Daemon) Bootstrap(ic *plugin.InitContext) error {
+func (c *Daemon) bootstrap(ic *plugin.InitContext) error {
 	var (
-		ctx = ic.Context
+		ctx = cns.WithNamespace(ic.Context, k3c.BootstrapNamespace)
 		cfg = ic.Config.(*config.K3Config)
 	)
-	if cfg.BootstrapImage == "" {
-		log.G(ctx).Infof("K3C bootstrapping skipped")
-		return nil
-	}
+
+	// setup containerd client
 	opts, err := getServicesOpts(ic)
 	if err != nil {
 		return err
 	}
-	client, err := containerd.New("", containerd.WithServices(opts...))
+	c.ctd, err = containerd.New("", containerd.WithServices(opts...))
 	if err != nil {
 		return err
 	}
-	log := log.G(ctx).WithField("namespace", cfg.BootstrapNamespace).WithField("image", cfg.BootstrapImage)
-	ctx = cns.WithNamespace(ctx, cfg.BootstrapNamespace)
-	image, err := client.GetImage(ctx, cfg.BootstrapImage)
+
+	// mark namespace as managed
+	err = c.ctd.NamespaceService().SetLabel(ctx, k3c.DefaultNamespace, "io.cri-containerd", "managed")
+	if err != nil {
+		return err
+	}
+
+	if cfg.BootstrapImage == "" || cfg.BootstrapSkip {
+		log.G(ctx).Infof("K3C bootstrap skipped")
+		return nil
+	}
+
+	logrus := log.G(ctx).WithField("namespace", cfg.BootstrapNamespace).WithField("image", cfg.BootstrapImage)
+
+	image, err := c.ctd.GetImage(ctx, cfg.BootstrapImage)
 	if errdefs.IsNotFound(err) {
-		log.Infof("K3C bootstrapping data...")
-		image, err = client.Pull(ctx, cfg.BootstrapImage, containerd.WithPullUnpack)
+		logrus.Infof("K3C bootstrapping ...")
+		image, err = c.ctd.Pull(ctx, cfg.BootstrapImage, containerd.WithPullUnpack)
 		if err != nil {
 			return err
 		}
 	} else if err != nil {
 		return err
 	}
-	path, err := getInstallPath(ic)
-	if err != nil {
-		if path = os.Getenv("K3C_ROOT"); path == "" {
-			return err
-		}
-		log.Warn(err)
-	}
-	if err := client.Install(ctx, image,
+	if err := c.ctd.Install(ctx, image,
 		containerd.WithInstallLibs,
 		containerd.WithInstallReplace,
-		containerd.WithInstallPath(path),
+		containerd.WithInstallPath(filepath.Join(ic.Root, "..")),
 	); err != nil {
 		return err
 	}
 
-	log.Infof("K3C bootstrapping done")
+	logrus.Infof("K3C bootstrapped")
 	return nil
 }
 
 func (c *Daemon) Close() error {
-	if c.cClient == nil {
+	if c.ctd == nil {
 		return nil
 	}
-	err := c.cClient.Close()
+	err := c.ctd.Close()
 	if err != nil {
 		return err
 	}
-	c.cClient = nil
+	c.ctd = nil
 	return nil
-}
-
-func getInstallPath(ic *plugin.InitContext) (string, error) {
-	plugins, err := ic.GetByType(plugin.InternalPlugin)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get plugins")
-	}
-	for _, plugin := range plugins {
-		if plugin.Registration.ID == "opt" {
-			if plugin.Registration.Disable {
-				return "", errors.New("opt plugin disabled")
-			}
-			return plugin.Meta.Exports["path"], nil
-		}
-	}
-	return "", errors.New("opt plugin unavailable")
 }
 
 func getServicesOpts(ic *plugin.InitContext) ([]containerd.ServicesOpt, error) {

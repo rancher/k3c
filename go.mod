@@ -4,7 +4,7 @@ go 1.13
 
 replace (
 	github.com/containerd/containerd => github.com/dweomer/containerd v1.3.5-0.20200416225531-efdd59c500bf // v1.3.4+k3c.1
-	github.com/containerd/cri => github.com/dweomer/cri v1.3.1-0.20200416231312-e53f7fa8bdb4 // v1.3.0+k3c.2
+	github.com/containerd/cri => github.com/dweomer/cri v1.3.1-0.20200501231243-e8677cd6a496 // v1.3.0+k3c.8
 	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20200223014041-6b972e50feee
 	github.com/docker/docker => github.com/docker/docker v1.4.2-0.20200227233006-38f52c9fec82
 	github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
@@ -33,13 +33,11 @@ replace (
 	k8s.io/kubernetes => github.com/rancher/kubernetes v1.17.4-k3s1
 	k8s.io/legacy-cloud-providers => github.com/rancher/kubernetes/staging/src/k8s.io/legacy-cloud-providers v1.17.4-k3s1
 	k8s.io/metrics => github.com/rancher/kubernetes/staging/src/k8s.io/metrics v1.17.4-k3s1
-	k8s.io/node-api => github.com/rancher/kubernetes/staging/src/k8s.io/node-api v1.17.4-k3s1
 	k8s.io/sample-apiserver => github.com/rancher/kubernetes/staging/src/k8s.io/sample-apiserver v1.17.4-k3s1
-	k8s.io/sample-cli-plugin => github.com/rancher/kubernetes/staging/src/k8s.io/sample-cli-plugin v1.17.4-k3s1
-	k8s.io/sample-controller => github.com/rancher/kubernetes/staging/src/k8s.io/sample-controller v1.17.4-k3s1
 )
 
 require (
+	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/goutils v1.1.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible
@@ -63,6 +61,7 @@ require (
 	github.com/huandu/xstrings v1.2.1 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/moby/buildkit v0.0.0
+	github.com/naoina/toml v0.1.1
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/opencontainers/runc v1.0.0-rc9.0.20200221051241-688cf6d43cc4 // indirect
 	github.com/opencontainers/runtime-spec v1.0.2-0.20200307132014-f49fed0d6290 // indirect
