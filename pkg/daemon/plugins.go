@@ -4,18 +4,19 @@ import (
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/plugin"
+	"github.com/containerd/containerd/remotes/docker"
 	"github.com/rancher/k3c/pkg/daemon/config"
 	"github.com/rancher/k3c/pkg/daemon/services/buildkit"
-	"github.com/rancher/k3c/pkg/kicker"
 	"github.com/rancher/k3c/pkg/pushstatus"
 	"github.com/rancher/k3c/pkg/remote/server"
 )
 
 var (
+	Config             = config.DefaultK3Config()
 	PluginRegistration = plugin.Registration{
 		ID:     "k3c",
 		Type:   plugin.GRPCPlugin,
-		Config: config.DefaultK3Config(),
+		Config: Config,
 		Requires: []plugin.Type{
 			plugin.InternalPlugin,
 			plugin.ServicePlugin,
@@ -31,42 +32,43 @@ func init() {
 }
 
 func PluginInitFunc(ic *plugin.InitContext) (interface{}, error) {
-	ctx := ic.Context
-	log.G(ctx).WithField(
+	log.G(ic.Context).WithField(
 		"address", ic.Address,
 	).WithField(
 		"root", ic.Root,
 	).WithField(
 		"state", ic.State,
-	).Info("Init K3C Plugin")
+	).Info("K3C init")
 
 	cfg := ic.Config.(*config.K3Config)
-	log.G(ctx).Debugf("Init K3C Plugin with config %+v", cfg)
+	log.G(ic.Context).Debugf("K3C config %+v", *cfg)
 
+	// exports
 	ic.Meta.Exports["K3CVersion"] = "v1alpha1"
-	ic.Meta.Platforms = append(ic.Meta.Platforms, platforms.DefaultSpec())
+	ic.Meta.Exports["bridge-name"] = cfg.BridgeName
+	ic.Meta.Exports["bridge-cidr"] = cfg.BridgeCIDR
+	ic.Meta.Exports["pod-logs-dir"] = cfg.PodLogs
+	ic.Meta.Exports["volumes-dir"] = cfg.Volumes
 
-	log.G(ctx).WithField("bridge", cfg.BridgeName).WithField("cidr", cfg.BridgeCIDR).Info("Start K3C...")
+	// platforms
+	if len(ic.Meta.Platforms) == 0 {
+		ic.Meta.Platforms = append(ic.Meta.Platforms, platforms.DefaultSpec())
+	}
 
 	daemon := &Daemon{
 		logPath:  cfg.PodLogs,
 		pushJobs: map[string]pushstatus.Tracker{},
-		gcKick:   kicker.New(ctx, true),
+		tracker:  docker.NewInMemoryTracker(),
 	}
 	// bootstrap in the foreground so that buildkit will have the binaries it needs
-	if err := daemon.Bootstrap(ic); err != nil {
-		log.G(ctx).WithError(err).Error("K3C failed to bootstrap")
+	if err := daemon.bootstrap(ic); err != nil {
+		return nil, err
 	}
-
 	service := server.NewContainerService(daemon)
-	// connect to the grpc socket in the background
-	// because it isn't started until all plugins get a chance to register
-	// TODO(dweomer): this could be avoided if cri provided service references the same way containerd does
-	go func() {
-		if err := daemon.Start(ctx, *cfg, ic.Address); err != nil {
-			log.G(ctx).WithError(err).Fatal("K3C failed to start")
-		}
-		service.SetInitialized(true)
-	}()
+	if err := daemon.start(ic); err != nil {
+		return nil, err
+	}
+	log.G(ic.Context).WithField("bridge", cfg.BridgeName).WithField("cidr", cfg.BridgeCIDR).Info("K3C daemon")
+	service.SetInitialized(true)
 	return service, nil
 }

@@ -8,11 +8,7 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/remotes"
-	"github.com/containerd/cri"
-	"github.com/containerd/cri/pkg/constants"
-	"github.com/containerd/cri/pkg/server"
 	"github.com/docker/distribution/reference"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -32,7 +28,7 @@ func init() {
 }
 
 func (c *Daemon) RemoveImage(ctx context.Context, id string) error {
-	_, err := c.image.RemoveImage(ctx, &pb.RemoveImageRequest{
+	_, err := c.img.RemoveImage(ctx, &pb.RemoveImageRequest{
 		Image: &pb.ImageSpec{
 			Image: id,
 		},
@@ -41,7 +37,7 @@ func (c *Daemon) RemoveImage(ctx context.Context, id string) error {
 }
 
 func (c *Daemon) ListImages(ctx context.Context) (images []client.Image, err error) {
-	resp, err := c.image.ListImages(ctx, &pb.ListImagesRequest{})
+	resp, err := c.img.ListImages(ctx, &pb.ListImagesRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -72,12 +68,12 @@ func (c *Daemon) resolveImage(ctx context.Context, image string) (images.Image, 
 		return images.Image{}, errors.Wrapf(client.ErrImageNotFound, "image %s does not have a valid digest", img.ID)
 	}
 
-	imageService := c.cClient.ImageService()
-	return imageService.Get(namespaces.WithNamespace(ctx, constants.K8sContainerdNamespace), img.Digests[0])
+	imageService := c.ctd.ImageService()
+	return imageService.Get(ctx, img.Digests[0])
 }
 
 func (c *Daemon) TagImage(ctx context.Context, image string, tags ...string) error {
-	imageService := c.cClient.ImageService()
+	imageService := c.ctd.ImageService()
 	cImage, err := c.resolveImage(ctx, image)
 	if err != nil {
 		return err
@@ -91,7 +87,7 @@ func (c *Daemon) TagImage(ctx context.Context, image string, tags ...string) err
 
 		cImage.Name = normalized.String()
 		// Attempt to create the image first
-		if _, err = imageService.Create(namespaces.WithNamespace(ctx, constants.K8sContainerdNamespace), cImage); err != nil {
+		if _, err = imageService.Create(ctx, cImage); err != nil {
 			return err
 		}
 	}
@@ -100,7 +96,7 @@ func (c *Daemon) TagImage(ctx context.Context, image string, tags ...string) err
 }
 
 func (c *Daemon) GetImage(ctx context.Context, image string) (*client.Image, error) {
-	resp, err := c.image.ImageStatus(ctx, &pb.ImageStatusRequest{
+	resp, err := c.img.ImageStatus(ctx, &pb.ImageStatusRequest{
 		Image: &pb.ImageSpec{
 			Image: image,
 		},
@@ -145,7 +141,7 @@ func (c *Daemon) PullProgress(ctx context.Context, image string) (<-chan []statu
 }
 
 func (c *Daemon) imagePulled(ctx context.Context, image string) (bool, error) {
-	resp, err := c.image.ImageStatus(ctx, &pb.ImageStatusRequest{
+	resp, err := c.img.ImageStatus(ctx, &pb.ImageStatusRequest{
 		Image: &pb.ImageSpec{
 			Image: image,
 		},
@@ -164,7 +160,7 @@ func (c *Daemon) imageProgress(ctx context.Context, image string) (result []stat
 		return nil, true, nil
 	}
 
-	statuses, err := c.cClient.ContentStore().ListStatuses(namespaces.WithNamespace(ctx, constants.K8sContainerdNamespace), "")
+	statuses, err := c.ctd.ContentStore().ListStatuses(ctx, "")
 	if err != nil {
 		return nil, false, err
 	}
@@ -205,7 +201,7 @@ func toAuth(authConfig *client.AuthConfig) *pb.AuthConfig {
 }
 
 func (c *Daemon) PullImage(ctx context.Context, image string, authConfig *client.AuthConfig) (string, error) {
-	resp, err := c.image.PullImage(ctx, &pb.PullImageRequest{
+	resp, err := c.img.PullImage(ctx, &pb.PullImageRequest{
 		Image: &pb.ImageSpec{
 			Image: image,
 		},
@@ -241,9 +237,11 @@ func (c *Daemon) PushProgress(ctx context.Context, image string) (<-chan []statu
 }
 
 func (c *Daemon) PushImage(ctx context.Context, image string, authConfig *client.AuthConfig) error {
-	resolver := cri.Resolver.GetResolver(toAuth(authConfig))
-	tracker := pushstatus.NewTracker(ctx, server.Tracker)
-
+	resolver, err := c.getResolver(ctx, authConfig)
+	if err != nil {
+		return err
+	}
+	tracker := pushstatus.NewTracker(ctx, c.tracker)
 	c.lock.Lock()
 	c.pushJobs[image] = tracker
 	c.lock.Unlock()
@@ -264,7 +262,7 @@ func (c *Daemon) PushImage(ctx context.Context, image string, authConfig *client
 		return nil, nil
 	})
 
-	return c.cClient.Push(namespaces.WithNamespace(ctx, constants.K8sContainerdNamespace), cImage.Name, cImage.Target,
+	return c.ctd.Push(ctx, cImage.Name, cImage.Target,
 		containerd.WithResolver(resolver),
 		containerd.WithImageHandler(jobHandler),
 	)

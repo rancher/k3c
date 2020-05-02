@@ -37,12 +37,12 @@ func NewContainerService(c client.Client) ContainerService {
 }
 
 func (s *server) Close() error {
-	logrus.Info("Stop K3C service")
+	logrus.Info("K3C stop")
 	return s.c.Close()
 }
 
 func (s *server) Register(g *grpc.Server) error {
-	logrus.Debugf("Register K3C ContainerService")
+	logrus.Debugf("K3C register ContainerService")
 	k3cv1.RegisterContainerServiceServer(g, &wrapper{svc: s})
 	return nil
 }

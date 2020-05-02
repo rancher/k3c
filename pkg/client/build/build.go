@@ -78,7 +78,7 @@ func (b *buildkitClient) Build(ctx context.Context, contextDir string, opts *Opt
 	}
 
 	eg := errgroup.Group{}
-	resp, err := b.client.Solve(ctx, nil, solveOpts, progress(&eg, opts.Progress))
+	resp, err := b.bkclient.Solve(ctx, nil, solveOpts, progress(&eg, opts.Progress))
 	if err != nil {
 		return "", err
 	}
@@ -89,7 +89,7 @@ func (b *buildkitClient) Build(ctx context.Context, contextDir string, opts *Opt
 
 	digest := resp.ExporterResponse["containerimage.digest"]
 	if len(opts.Tag) > 1 {
-		return digest, b.c.TagImage(ctx, opts.Tag[0], opts.Tag[1:]...)
+		return digest, b.k3client.TagImage(ctx, opts.Tag[0], opts.Tag[1:]...)
 	}
 
 	return digest, nil

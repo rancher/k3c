@@ -27,29 +27,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containerd/containerd/remotes"
-
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/errdefs"
 	containerdimages "github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/remotes/docker"
-	criconfig "github.com/containerd/cri/pkg/config"
 	distribution "github.com/docker/distribution/reference"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+
+	criconfig "github.com/containerd/cri/pkg/config"
 )
-
-var Tracker = docker.NewInMemoryTracker()
-
-func (c *criService) GetResolver(auth *runtime.AuthConfig) remotes.Resolver {
-	return docker.NewResolver(docker.ResolverOptions{
-		Hosts:   c.registryHosts(auth),
-		Tracker: Tracker,
-	})
-}
 
 // For image management:
 // 1) We have an in-memory metadata index to:

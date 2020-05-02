@@ -23,7 +23,7 @@ func (c *chanWriter) Write(p []byte) (n int, err error) {
 
 type wrapper struct {
 	ctx context.Context
-	svc pb.RuntimeServiceClient
+	svc pb.RuntimeServiceServer
 }
 
 func (w *wrapper) Version(apiVersion string) (*pb.VersionResponse, error) {
