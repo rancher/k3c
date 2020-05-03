@@ -6,13 +6,25 @@ source $(dirname $0)/version
 cd $(dirname $0)/..
 
 mkdir -p bin
-if [ "$(uname)" = "Linux" ]; then
-    OTHER_LINKFLAGS="-extldflags -static -s"
-fi
-LINKFLAGS="-X github.com/rancher/k3c/pkg/version.Version=$VERSION"
-LINKFLAGS="-X github.com/rancher/k3c/pkg/version.GitCommit=$COMMIT $LINKFLAGS"
-CGO_ENABLED=0 go build -ldflags "$LINKFLAGS $OTHER_LINKFLAGS" -o bin/k3c
+
+GO_BUILDTAGS=${GO_BUILDTAGS:-"apparmor seccomp"}
+GO_EXTLDFLAGS=${GO_EXTLDFLAGS:-"-static"}
+GO_LDFLAGS=${GO_LDFLAGS:-"-w -s"}
+
+PKG="github.com/rancher/k3c"
+PKG_CONTAINERD="github.com/rancher/containerd"
+
+GO_LDFLAGS="${GO_LDFLAGS} -extldflags '${GO_EXTLDFLAGS}'
+    -X ${PKG}/pkg/version.Version=${VERSION}
+    -X ${PKG}/pkg/version.GitCommit=${COMMIT:0:8}
+    -X ${PKG}/pkg/daemon/config.DefaultBootstrapImage=docker.io/${REPO}/k3c-data:$(echo "${TAG}" | tr '+' '-')
+    -X github.com/containerd/containerd/version.Version=${VERSION_CONTAINERD}
+    -X github.com/containerd/containerd/version.Package=${PKG_CONTAINERD}
+"
+
+CGO_ENABLED="${CGO_ENABLED:-0}" go build -ldflags "${GO_LDFLAGS}" -tags "${GO_BUILDTAGS}" -o bin/k3c
+
 if [ "$CROSS" = "true" ] && [ "$ARCH" = "amd64" ]; then
-    GOOS=darwin go build -ldflags "$LINKFLAGS" -o bin/k3c-darwin
-    GOOS=windows go build -ldflags "$LINKFLAGS" -o bin/k3c-windows
+    GOOS=darwin go build -ldflags "${GO_LDFLAGS}" -tags "${GO_BUILDTAGS}" -o "bin/k3c-darwin-${ARCH}"
+    GOOS=windows go build -ldflags "${GO_LDFLAGS}" -tags "${GO_BUILDTAGS}" -o "bin/k3c-windows-${ARCH}"
 fi

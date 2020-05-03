@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func Command(version string) *cli.Command {
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:            "daemon",
 		Usage:           "Run the container daemon",

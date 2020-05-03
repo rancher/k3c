@@ -3,11 +3,9 @@ package config
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/BurntSushi/toml"
 	"github.com/containerd/containerd/platforms"
@@ -15,7 +13,6 @@ import (
 	cri "github.com/containerd/cri/pkg/config"
 	buildkit "github.com/moby/buildkit/cmd/buildkitd/config"
 	"github.com/rancher/k3c/pkg/defaults"
-	"github.com/rancher/k3c/pkg/version"
 )
 
 var (
@@ -27,7 +24,7 @@ var (
 	DefaultBridgeName         = defaults.DefaultBridgeName
 	DefaultBridgeCIDR         = defaults.DefaultBridgeCIDR
 	DefaultBootstrapNamespace = defaults.BootstrapNamespace
-	DefaultBootstrapImage     = fmt.Sprintf("docker.io/rancher/k3c-data:%s-%s", version.Version, runtime.GOARCH)
+	DefaultBootstrapImage     = "docker.io/rancher/k3c-data:dev"
 
 	DefaultSandboxImage = defaults.DefaultSandboxImage
 	DefaultPodLogsDir   = defaults.DefaultPodLogsDir
@@ -117,7 +114,7 @@ func DefaultCniConflist(bridge, cidr string) map[string]interface{} {
 	}
 }
 
-func WriteFileJson(path string, data interface{}, mode os.FileMode) error {
+func WriteFileJSON(path string, data interface{}, mode os.FileMode) error {
 	buf := bytes.Buffer{}
 	if err := json.NewEncoder(&buf).Encode(data); err != nil {
 		return err
@@ -125,7 +122,7 @@ func WriteFileJson(path string, data interface{}, mode os.FileMode) error {
 	return ioutil.WriteFile(path, buf.Bytes(), mode)
 }
 
-func WriteFileToml(path string, data interface{}, mode os.FileMode) error {
+func WriteFileTOML(path string, data interface{}, mode os.FileMode) error {
 	buf := bytes.Buffer{}
 	if err := toml.NewEncoder(&buf).Encode(data); err != nil {
 		return err

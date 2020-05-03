@@ -18,7 +18,7 @@ package:
 	./scripts/package
 
 clean:
-	rm -rf bin
+	rm -rf bin dist
 
 ci: build test validate
 
