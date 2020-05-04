@@ -102,7 +102,7 @@ func New() *cli.App {
 		command(&events.Events{},
 			"Get real time events from the server",
 			""),
-		daemon.Command(version.Version),
+		daemon.Command(),
 		{
 			Name:    "volume",
 			Aliases: []string{"volumes", "v"},

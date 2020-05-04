@@ -8,13 +8,13 @@ set -e
 cd $(dirname $0)/..
 
 mkdir -p dist/artifacts
-cp bin/k3c dist/artifacts/k3c${SUFFIX}
+cp -vf "bin/k3c" "dist/artifacts/k3c-$(go env GOOS)-${ARCH}"
 
-IMAGE=${REPO}/k3c-data:${TAG}
+IMAGE=${REPO}/k3c-data:$(echo "${TAG}" | tr '+' '-')
 DOCKERFILE=Dockerfile
 if [ -e ${DOCKERFILE}.${ARCH} ]; then
     DOCKERFILE=${DOCKERFILE}.${ARCH}
 fi
 
-${DOCKER} build --target data -f ${DOCKERFILE} -t ${IMAGE} .
-echo Built ${IMAGE}
+${DOCKER} build --target data -f "${DOCKERFILE}" -t "${IMAGE}" .
+echo "Built ${IMAGE}"

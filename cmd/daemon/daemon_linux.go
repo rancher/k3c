@@ -18,7 +18,7 @@ import (
 	"k8s.io/klog"
 )
 
-func Command(version string) *cliv2.Command {
+func Command() *cliv2.Command {
 	app := command.App()
 	app.Name = "k3c daemon"
 	app.Usage = "containerd++ (cri, buildkit and k3c)"
@@ -28,7 +28,6 @@ containerd APIs all on a single gRPC socket. It is meant to be a drop-in
 replacement for a CRI-enabled containerd with additional functionality on
 the backend to support the Docker work-alike frontend of k3c.`
 	app.HelpName = app.Name
-	app.Version = fmt.Sprintf("k3c version %s (%s)", version, app.Version)
 
 	for i := range app.Flags {
 		flag := app.Flags[i]
@@ -145,16 +144,16 @@ the backend to support the Docker work-alike frontend of k3c.`
 			if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 				return err
 			}
-			if err := config.WriteFileToml(path, &daemon.Config.Namespace, 0600); err != nil {
+			if err := config.WriteFileTOML(path, &daemon.Config.Namespace, 0600); err != nil {
 				return err
 			}
 			if err := os.MkdirAll(daemon.Config.Namespace.NetworkPluginConfDir, 0700); err != nil {
 				return err
 			}
-			if err := config.WriteFileJson(buildkit.Config.Workers.Containerd.NetworkConfig.CNIConfigPath, config.DefaultCniConf(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
+			if err := config.WriteFileJSON(buildkit.Config.Workers.Containerd.NetworkConfig.CNIConfigPath, config.DefaultCniConf(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
 				return err
 			}
-			if err := config.WriteFileJson(filepath.Join(daemon.Config.Namespace.NetworkPluginConfDir, "90-k3c.conflist"), config.DefaultCniConflist(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
+			if err := config.WriteFileJSON(filepath.Join(daemon.Config.Namespace.NetworkPluginConfDir, "90-k3c.conflist"), config.DefaultCniConflist(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
 				return err
 			}
 
