@@ -197,7 +197,7 @@ github.com/containernetworking/cni/pkg/types
 github.com/containernetworking/cni/pkg/types/020
 github.com/containernetworking/cni/pkg/types/current
 github.com/containernetworking/cni/pkg/version
-# github.com/containernetworking/plugins v0.8.4
+# github.com/containernetworking/plugins v0.8.5
 github.com/containernetworking/plugins/pkg/ns
 # github.com/coreos/go-systemd v0.0.0-20190620071333-e64a0ec8b42a
 github.com/coreos/go-systemd/daemon
@@ -423,7 +423,7 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.0.0-rc9.0.20200221051241-688cf6d43cc4 => github.com/opencontainers/runc v1.0.0-rc10
+# github.com/opencontainers/runc v1.0.0-rc9 => github.com/opencontainers/runc v1.0.0-rc10
 github.com/opencontainers/runc/libcontainer/apparmor
 github.com/opencontainers/runc/libcontainer/configs
 github.com/opencontainers/runc/libcontainer/devices

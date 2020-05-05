@@ -1,7 +1,0 @@
-#!/bin/bash
-
-source $(dirname $0)/docker
-
-set -e
-
-${DOCKER} build --target make --build-arg MAKE=$1 -o ./ .

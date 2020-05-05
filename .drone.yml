@@ -8,14 +8,15 @@ platform:
 
 steps:
 - name: build
-  image: rancher/dapper:v0.4.1
+  image: rancher/dapper:v0.5.0
   commands:
-  - dapper ci
+  - dapper -f Dockerfile --target dapper make dapper-ci
+  - echo "${DRONE_TAG}-amd64" | sed -e 's/+/-/g' >.tags
   volumes:
   - name: docker
     path: /var/run/docker.sock
 
-- name: github_binary_release
+- name: upload
   image: plugins/github-release
   settings:
     api_key:
@@ -36,14 +37,14 @@ steps:
     event:
     - tag
 
-- name: docker-publish
+- name: publish
   image: plugins/docker
   settings:
     dockerfile: Dockerfile
     target: data
     password:
       from_secret: docker_password
-    repo: "rancher/k3c-data"
+    repo: "rancher/k3c"
     tag: "${DRONE_TAG}-amd64"
     username:
       from_secret: docker_username
@@ -71,14 +72,15 @@ platform:
 
 steps:
 - name: build
-  image: rancher/dapper:v0.4.1
+  image: rancher/dapper:v0.5.0
   commands:
-  - dapper ci
+  - dapper -f Dockerfile --target dapper make dapper-ci
+  - echo "${DRONE_TAG}-arm64" | sed -e 's/+/-/g' >.tags
   volumes:
   - name: docker
     path: /var/run/docker.sock
 
-- name: github_binary_release
+- name: upload
   image: plugins/github-release
   settings:
     api_key:
@@ -99,14 +101,14 @@ steps:
     event:
     - tag
 
-- name: docker-publish
+- name: publish
   image: plugins/docker
   settings:
     dockerfile: Dockerfile
     target: data
     password:
       from_secret: docker_password
-    repo: "rancher/k3c-data"
+    repo: "rancher/k3c"
     tag: "${DRONE_TAG}-arm64"
     username:
       from_secret: docker_username
@@ -134,14 +136,15 @@ platform:
 
 steps:
 - name: build
-  image: rancher/dapper:v0.4.1
+  image: rancher/dapper:v0.5.0
   commands:
-  - dapper ci
+  - dapper -f Dockerfile --target dapper make dapper-ci
+  - echo "${DRONE_TAG}-arm" | sed -e 's/+/-/g' >.tags
   volumes:
   - name: docker
     path: /var/run/docker.sock
 
-- name: github_binary_release
+- name: upload
   image: plugins/github-release
   settings:
     api_key:
@@ -162,14 +165,14 @@ steps:
     event:
     - tag
 
-- name: docker-publish
+- name: publish
   image: plugins/docker
   settings:
     dockerfile: Dockerfile
     target: data
     password:
       from_secret: docker_password
-    repo: "rancher/k3c-data"
+    repo: "rancher/k3c"
     tag: "${DRONE_TAG}-arm"
     username:
       from_secret: docker_username
@@ -207,8 +210,8 @@ steps:
       - linux/amd64
       - linux/arm64
       - linux/arm
-    target: "rancher/k3c-data:${DRONE_TAG}"
-    template: "rancher/k3c-data:${DRONE_TAG}-ARCH"
+    target: "rancher/k3c:${DRONE_TAG}"
+    template: "rancher/k3c:${DRONE_TAG}-ARCH"
   when:
     instance:
     - drone-publish.rancher.io
