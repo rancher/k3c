@@ -24,7 +24,7 @@ var (
 	DefaultBridgeName         = defaults.DefaultBridgeName
 	DefaultBridgeCIDR         = defaults.DefaultBridgeCIDR
 	DefaultBootstrapNamespace = defaults.BootstrapNamespace
-	DefaultBootstrapImage     = "docker.io/rancher/k3c-data:dev"
+	DefaultBootstrapImage     = "docker.io/rancher/k3c:dev"
 
 	DefaultSandboxImage = defaults.DefaultSandboxImage
 	DefaultPodLogsDir   = defaults.DefaultPodLogsDir

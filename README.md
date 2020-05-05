@@ -51,7 +51,7 @@ To build the `k3c` binary:
 make build
 ```
 
-To build the `k3c-data` image:
+To build the `k3c` image:
 
 ```bash
 make package
@@ -61,7 +61,7 @@ make package
 
 Start the daemon as root (rootless will be supported in the future if this project takes off)
 ```bash
-./bin/k3c daemon --group=$(id -g) --bootstrap-image=docker.io/rancher/k3c-data:dev
+./bin/k3c daemon --group=$(id -g) --bootstrap-image=docker.io/rancher/k3c:dev
 ```
 
 Run containers like you would with `docker`
