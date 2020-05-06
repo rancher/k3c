@@ -44,9 +44,13 @@ ifndef GOBIN
 	GOBIN := bin
 endif
 
-VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.dirty' --always --tags)
-REVISION=$(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .dirty; fi)
-RELEASE=${PROG}-$(VERSION).${GOOS}-${GOARCH}
+ifdef DRONE_TAG
+	VERSION = ${DRONE_TAG}
+else
+	VERSION = $(shell git describe --match 'v[0-9]*' --dirty='.dirty' --always --tags)
+endif
+REVISION = $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .dirty; fi)
+RELEASE = ${PROG}-${GOOS}-${GOARCH}
 ifndef TAG
 	TAG := $(shell echo "$(VERSION)" | tr '+' '-')-${GOARCH}
 endif
@@ -85,7 +89,7 @@ ci-shell: clean .dapper                  ## Launch a shell in the CI environment
 dapper-ci: .ci                           ## Used by Drone CI, does the same as "ci" but in a Drone way
 
 build:                                   ## Build using host go tools
-	go build ${DEBUG_GO_GCFLAGS} ${GO_GCFLAGS} ${GO_BUILD_FLAGS} -o ${GOBIN}/${PROG} -ldflags "${GO_LDFLAGS}" ${GO_TAGS}
+	go build ${DEBUG_GO_GCFLAGS} ${GO_GCFLAGS} ${GO_BUILDFLAGS} -o ${GOBIN}/${PROG} -ldflags "${GO_LDFLAGS}" ${GO_TAGS}
 
 build-debug:                             ## Debug build using host go tools
 	$(MAKE) GODEBUG=y build
