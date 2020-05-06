@@ -40,6 +40,8 @@ steps:
 - name: publish
   image: plugins/docker
   settings:
+    build_args:
+      - ARCH=amd64
     dockerfile: Dockerfile
     target: release
     password:
@@ -104,6 +106,8 @@ steps:
 - name: publish
   image: plugins/docker
   settings:
+    build_args:
+      - ARCH=arm64
     dockerfile: Dockerfile
     target: release
     password:
@@ -168,6 +172,8 @@ steps:
 - name: publish
   image: plugins/docker
   settings:
+    build_args:
+      - ARCH=arm
     dockerfile: Dockerfile
     target: release
     password:
@@ -200,7 +206,7 @@ platform:
 
 steps:
 - name: manifest
-  image: plugins/manifest:1.0.2
+  image: plugins/manifest
   settings:
     username:
       from_secret: docker_username
