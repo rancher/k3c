@@ -36,9 +36,12 @@ VOLUME /var/log
 # Dapper/Drone/CI environment
 FROM build AS dapper
 ARG GOBIN=/opt/k3c/bin
+ARG GOFLAGS=" -mod=vendor"
 ARG GOPATH=/go
 ENV GOBIN=${GOBIN} \
+    GOFLAGS=${GOFLAGS} \
     GOPATH=${GOPATH}
+
 ENV DAPPER_ENV REPO TAG DRONE_TAG
 ENV DAPPER_OUTPUT ./bin ./dist
 ENV DAPPER_DOCKER_SOCKET true
@@ -74,6 +77,7 @@ ARG RUNC_PACKAGE=github.com/opencontainers/runc
 ARG RUNC_BUILDTAGS="apparmor seccomp selinux"
 RUN git clone -b "${RUNC_VERSION}" "https://${RUNC_PACKAGE}.git" ${GOPATH}/src/github.com/opencontainers/runc
 WORKDIR ${GOPATH}/src/github.com/opencontainers/runc
+ENV GO111MODULE=off
 RUN set -x \
  && make BUILDTAGS="${RUNC_BUILDTAGS}" static
 RUN set -x \
