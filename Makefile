@@ -101,7 +101,7 @@ validate:                                ## Run go fmt/vet
 	go vet ./...
 
 validate-ci: validate bin/golangci-lint  ## Run more validation for CI
-	./bin/golangci-lint run
+	[ "${GOARCH}" != "amd64" ] || ./bin/golangci-lint run
 
 run: build-debug
 	./bin/${PROG} server
