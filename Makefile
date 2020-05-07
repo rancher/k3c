@@ -69,8 +69,9 @@ GO_LDFLAGS ?= $(EXTRA_LDFLAGS)
 GO_LDFLAGS += -X ${PKG}/pkg/version.Version=$(VERSION)
 GO_LDFLAGS += -X ${PKG}/pkg/version.GitCommit=$(REVISION)
 GO_LDFLAGS += -X ${PKG}/pkg/daemon/config.DefaultBootstrapImage=docker.io/${IMAGE}:${TAG}
-GO_LDFLAGS += -X github.com/containerd/containerd/version.Version=$(shell grep 'github.com/containerd/containerd' go.mod | head -n1 | awk '{print $$4}')
 GO_LDFLAGS += -X github.com/containerd/containerd/version.Package=$(shell grep 'github.com/containerd/containerd' go.mod | head -n1 | awk '{print $$3}')
+GO_LDFLAGS += -X github.com/containerd/containerd/version.Revision=$(shell grep 'github.com/containerd/containerd' go.mod | head -n1 | awk '{print $$4}')
+GO_LDFLAGS += -X github.com/containerd/containerd/version.Version=$(shell grep 'github.com/containerd/containerd' go.mod | head -n1 | awk '{print $$6}')
 GO_LDFLAGS += -extldflags '${GO_EXTLDFLAGS}'
 
 default: in-docker-build                 ## Build using docker environment (default target)
@@ -98,7 +99,7 @@ package:                                 ## Build final docker image for push
 	docker build --build-arg ARCH=${GOARCH} --tag ${IMAGE}:${TAG} .
 
 bin/golangci-lint:
-	curl -sL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s ${GOLANGCI_VERSION}
+	curl -fsL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s ${GOLANGCI_VERSION}
 
 validate:                                ## Run go fmt/vet
 	go fmt ./...
