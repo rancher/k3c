@@ -31,13 +31,15 @@ type Config struct {
 	Path string `toml:"path"`
 }
 
+var PluginConfig = Config{
+	Path: defaultPath,
+}
+
 func init() {
 	plugin.Register(&plugin.Registration{
 		Type: plugin.InternalPlugin,
 		ID:   "opt",
-		Config: &Config{
-			Path: defaultPath,
-		},
+		Config: &PluginConfig,
 		InitFn: func(ic *plugin.InitContext) (interface{}, error) {
 			path := ic.Config.(*Config).Path
 			ic.Meta.Exports["path"] = path

@@ -3,7 +3,7 @@ module github.com/rancher/k3c
 go 1.13
 
 replace (
-	github.com/containerd/containerd => github.com/dweomer/containerd v1.3.5-0.20200416225531-efdd59c500bf // v1.3.4+k3c.1
+	github.com/containerd/containerd => github.com/dweomer/containerd v1.3.5-0.20200508232507-1139e11acb7b // v1.3.4+k3c.2
 	github.com/containerd/cri => github.com/dweomer/cri v1.11.1-0.20200508215717-5a3b30567ad1 // v1.3.0+k3c.9+unlisted
 	//github.com/containerd/cri => /go/src/github.com/containerd/cri
 	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20200223014041-6b972e50feee
