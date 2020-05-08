@@ -18,9 +18,9 @@ package server
 
 import (
 	"golang.org/x/net/context"
-
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 
+	criutil "github.com/containerd/cri/pkg/containerd/util"
 	containerstore "github.com/containerd/cri/pkg/store/container"
 )
 
@@ -30,8 +30,14 @@ func (c *criService) ListContainers(ctx context.Context, r *runtime.ListContaine
 	containersInStore := c.containerStore.List()
 
 	var containers []*runtime.Container
-	for _, container := range containersInStore {
-		containers = append(containers, toCRIContainer(container))
+	for _, containerInStore := range containersInStore {
+		container := toCRIContainer(containerInStore)
+		if unlisted, _ := criutil.Unlisted(ctx); container.Labels != nil {
+			if ns, ok := container.Labels[criutil.UnlistedLabel]; ok && ns != unlisted {
+				continue
+			}
+		}
+		containers = append(containers, container)
 	}
 
 	containers = c.filterCRIContainers(containers, r.GetFilter())

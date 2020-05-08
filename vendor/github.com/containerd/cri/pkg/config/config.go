@@ -21,9 +21,11 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/plugin"
 	"github.com/pkg/errors"
+	"k8s.io/kubernetes/pkg/kubelet/server/streaming"
 )
 
 // Runtime struct to contain the type(ID), engine, and root variables for a default runtime
@@ -120,10 +122,9 @@ type AuthConfig struct {
 
 // TLSConfig contains the CA/Cert/Key used for a registry
 type TLSConfig struct {
-	InsecureSkipVerify bool   `toml:"insecure_skip_verify" json:"insecure_skip_verify"`
-	CAFile             string `toml:"ca_file" json:"caFile"`
-	CertFile           string `toml:"cert_file" json:"certFile"`
-	KeyFile            string `toml:"key_file" json:"keyFile"`
+	CAFile   string `toml:"ca_file" json:"caFile"`
+	CertFile string `toml:"cert_file" json:"certFile"`
+	KeyFile  string `toml:"key_file" json:"keyFile"`
 }
 
 // Registry is registry settings configured
@@ -225,6 +226,51 @@ type Config struct {
 	RootDir string `json:"rootDir"`
 	// StateDir is the root directory path for managing volatile pod/container data
 	StateDir string `json:"stateDir"`
+}
+
+// DefaultConfig returns default configurations of cri plugin.
+func DefaultConfig() PluginConfig {
+	return PluginConfig{
+		CniConfig: CniConfig{
+			NetworkPluginBinDir:       "/opt/cni/bin",
+			NetworkPluginConfDir:      "/etc/cni/net.d",
+			NetworkPluginMaxConfNum:   1, // only one CNI plugin config file will be loaded
+			NetworkPluginConfTemplate: "",
+		},
+		ContainerdConfig: ContainerdConfig{
+			Snapshotter:        containerd.DefaultSnapshotter,
+			DefaultRuntimeName: "runc",
+			NoPivot:            false,
+			Runtimes: map[string]Runtime{
+				"runc": {
+					Type: "io.containerd.runc.v1",
+				},
+			},
+		},
+		DisableTCPService:   true,
+		StreamServerAddress: "127.0.0.1",
+		StreamServerPort:    "0",
+		StreamIdleTimeout:   streaming.DefaultConfig.StreamIdleTimeout.String(), // 4 hour
+		EnableSelinux:       false,
+		EnableTLSStreaming:  false,
+		X509KeyPairStreaming: X509KeyPairStreaming{
+			TLSKeyFile:  "",
+			TLSCertFile: "",
+		},
+		SandboxImage:            "k8s.gcr.io/pause:3.1",
+		StatsCollectPeriod:      10,
+		SystemdCgroup:           false,
+		MaxContainerLogLineSize: 16 * 1024,
+		Registry: Registry{
+			Mirrors: map[string]Mirror{
+				"docker.io": {
+					Endpoints: []string{"https://registry-1.docker.io"},
+				},
+			},
+		},
+		MaxConcurrentDownloads: 3,
+		DisableProcMount:       false,
+	}
 }
 
 const (

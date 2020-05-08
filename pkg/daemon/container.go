@@ -10,6 +10,9 @@ import (
 	"strings"
 	"time"
 
+	criutil "github.com/containerd/cri/pkg/containerd/util"
+	"github.com/rancher/k3c/pkg/defaults"
+
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/pkg/errors"
 	"github.com/rancher/k3c/pkg/client"
@@ -243,6 +246,10 @@ func (c *Daemon) CreateContainer(ctx context.Context, podID, image string, opts 
 	if opts == nil {
 		opts = &v1alpha1.ContainerOptions{}
 	}
+	if opts.Labels == nil {
+		opts.Labels = map[string]string{}
+	}
+	opts.Labels[criutil.UnlistedLabel] = defaults.PrivateNamespace
 
 	pods, err := c.crt.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{
 		Filter: &pb.PodSandboxFilter{

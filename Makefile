@@ -47,7 +47,7 @@ endif
 ifdef DRONE_TAG
 	VERSION = ${DRONE_TAG}
 else
-	VERSION = $(shell git describe --match 'v[0-9]*' --dirty='.dirty' --always --tags)
+	VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.dirty' --always --tags)
 endif
 REVISION = $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .dirty; fi)
 RELEASE = ${PROG}-${GOOS}-${GOARCH}

@@ -132,7 +132,7 @@ func (c *criService) execInContainer(ctx context.Context, id string, opts execOp
 		return nil, errors.Wrapf(err, "failed to create exec %q", execID)
 	}
 	defer func() {
-		deferCtx, deferCancel := ctrdutil.DeferContext(c.name)
+		deferCtx, deferCancel := ctrdutil.DeferContext()
 		defer deferCancel()
 		if _, err := process.Delete(deferCtx, containerd.WithProcessKill); err != nil {
 			log.G(ctx).WithError(err).Errorf("Failed to delete exec process %q for container %q", execID, id)
@@ -147,7 +147,7 @@ func (c *criService) execInContainer(ctx context.Context, id string, opts execOp
 		return nil, errors.Wrapf(err, "failed to start exec %q", execID)
 	}
 
-	handleResizing(ctx, opts.resize, func(size remotecommand.TerminalSize) {
+	handleResizing(opts.resize, func(size remotecommand.TerminalSize) {
 		if err := process.Resize(ctx, uint32(size.Width), uint32(size.Height)); err != nil {
 			log.G(ctx).WithError(err).Errorf("Failed to resize process %q console for container %q", execID, id)
 		}

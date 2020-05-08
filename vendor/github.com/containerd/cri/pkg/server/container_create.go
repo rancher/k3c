@@ -28,6 +28,13 @@ import (
 	"github.com/containerd/containerd/contrib/seccomp"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/oci"
+	"github.com/containerd/cri/pkg/annotations"
+	"github.com/containerd/cri/pkg/config"
+	customopts "github.com/containerd/cri/pkg/containerd/opts"
+	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
+	cio "github.com/containerd/cri/pkg/server/io"
+	containerstore "github.com/containerd/cri/pkg/store/container"
+	"github.com/containerd/cri/pkg/util"
 	"github.com/containerd/typeurl"
 	"github.com/davecgh/go-spew/spew"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -36,14 +43,6 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
-
-	"github.com/containerd/cri/pkg/annotations"
-	"github.com/containerd/cri/pkg/config"
-	customopts "github.com/containerd/cri/pkg/containerd/opts"
-	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
-	cio "github.com/containerd/cri/pkg/server/io"
-	containerstore "github.com/containerd/cri/pkg/store/container"
-	"github.com/containerd/cri/pkg/util"
 )
 
 const (
@@ -169,7 +168,7 @@ func (c *criService) CreateContainer(ctx context.Context, r *runtime.CreateConta
 	}
 	log.G(ctx).Debugf("Use OCI runtime %+v for sandbox %q and container %q", ociRuntime, sandboxID, id)
 
-	spec, err := c.generateContainerSpec(ctx, id, sandboxID, sandboxPid, config, sandboxConfig,
+	spec, err := c.generateContainerSpec(id, sandboxID, sandboxPid, config, sandboxConfig,
 		&image.ImageSpec.Config, append(mounts, volumeMounts...), ociRuntime)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate container %q spec", id)
@@ -267,7 +266,7 @@ func (c *criService) CreateContainer(ctx context.Context, r *runtime.CreateConta
 	apparmorSpecOpts, err := generateApparmorSpecOpts(
 		securityContext.GetApparmorProfile(),
 		securityContext.GetPrivileged(),
-		c.apparmorEnabled())
+		c.apparmorEnabled)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate apparmor spec opts")
 	}
@@ -278,7 +277,7 @@ func (c *criService) CreateContainer(ctx context.Context, r *runtime.CreateConta
 	seccompSpecOpts, err := generateSeccompSpecOpts(
 		securityContext.GetSeccompProfilePath(),
 		securityContext.GetPrivileged(),
-		c.seccompEnabled())
+		c.seccompEnabled)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate seccomp spec opts")
 	}
@@ -302,7 +301,7 @@ func (c *criService) CreateContainer(ctx context.Context, r *runtime.CreateConta
 	}
 	defer func() {
 		if retErr != nil {
-			deferCtx, deferCancel := ctrdutil.DeferContext(c.name)
+			deferCtx, deferCancel := ctrdutil.DeferContext()
 			defer deferCancel()
 			if err := cntr.Delete(deferCtx, containerd.WithSnapshotCleanup); err != nil {
 				log.G(ctx).WithError(err).Errorf("Failed to delete containerd container %q", id)
@@ -336,7 +335,7 @@ func (c *criService) CreateContainer(ctx context.Context, r *runtime.CreateConta
 	return &runtime.CreateContainerResponse{ContainerId: id}, nil
 }
 
-func (c *criService) generateContainerSpec(ctx context.Context, id string, sandboxID string, sandboxPid uint32, config *runtime.ContainerConfig,
+func (c *criService) generateContainerSpec(id string, sandboxID string, sandboxPid uint32, config *runtime.ContainerConfig,
 	sandboxConfig *runtime.PodSandboxConfig, imageConfig *imagespec.ImageConfig, extraMounts []*runtime.Mount,
 	ociRuntime config.Runtime) (retSpec *runtimespec.Spec, retErr error) {
 
@@ -468,7 +467,7 @@ func (c *criService) generateContainerSpec(ctx context.Context, id string, sandb
 		customopts.WithAnnotation(annotations.SandboxID, sandboxID),
 	)
 
-	return runtimeSpec(ctx, id, specOpts...)
+	return runtimeSpec(id, specOpts...)
 }
 
 // generateVolumeMounts sets up image volumes for container. Rely on the removal of container
@@ -491,10 +490,10 @@ func (c *criService) generateVolumeMounts(containerRootDir string, criMounts []*
 		src := filepath.Join(containerRootDir, "volumes", volumeID)
 		// addOCIBindMounts will create these volumes.
 		mounts = append(mounts, &runtime.Mount{
-			ContainerPath: dst,
-			HostPath:      src,
+			ContainerPath:  dst,
+			HostPath:       src,
+			SelinuxRelabel: true,
 			// Use default mount propagation.
-			// TODO(random-liu): What about selinux relabel?
 		})
 	}
 	return mounts
@@ -554,8 +553,9 @@ func (c *criService) generateContainerMounts(sandboxID string, config *runtime.C
 }
 
 // runtimeSpec returns a default runtime spec used in cri-containerd.
-func runtimeSpec(ctx context.Context, id string, opts ...oci.SpecOpts) (*runtimespec.Spec, error) {
+func runtimeSpec(id string, opts ...oci.SpecOpts) (*runtimespec.Spec, error) {
 	// GenerateSpec needs namespace.
+	ctx := ctrdutil.NamespacedContext()
 	spec, err := oci.GenerateSpec(ctx, nil, &containers.Container{ID: id}, opts...)
 	if err != nil {
 		return nil, err

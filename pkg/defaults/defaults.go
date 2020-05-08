@@ -1,5 +1,7 @@
 package defaults
 
+import "github.com/containerd/cri/pkg/constants"
+
 const (
 	// DefaultConfigFile is the default location of the containerd configuration file.
 	DefaultConfigFile = "/etc/rancher/k3c/config.toml"
@@ -16,12 +18,13 @@ const (
 	// Used in place of https://github.com/containerd/containerd/blob/v1.3.4/defaults/defaults_unix.go#L29.
 	DefaultAddress = DefaultStateDir + "/k3c.sock"
 
-	// DefaultNamespace is the default namespace to use when communicating with containerd.
+	// PublicNamespace is the default namespace to use when communicating with containerd.
 	// See https://github.com/containerd/containerd/blob/v1.3.4/namespaces/context.go#L37.
-	DefaultNamespace = "k3c.io"
+	PublicNamespace = constants.K8sContainerdNamespace
 
-	// BootstrapNamespace is the bootstrap namespace to use when installing via the containerd opt service.
-	BootstrapNamespace = `bootstrap.` + DefaultNamespace
+	// PrivateNamespace is the bootstrap namespace to use when installing via the containerd opt service
+	// and building images.
+	PrivateNamespace = "k3c.io"
 
 	// DefaultBridgeName is the default name of the network bridge, i.e. docker0.
 	DefaultBridgeName = "k3c0"

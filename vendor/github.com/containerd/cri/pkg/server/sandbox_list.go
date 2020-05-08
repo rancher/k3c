@@ -20,6 +20,7 @@ import (
 	"golang.org/x/net/context"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 
+	criutil "github.com/containerd/cri/pkg/containerd/util"
 	sandboxstore "github.com/containerd/cri/pkg/store/sandbox"
 )
 
@@ -29,10 +30,16 @@ func (c *criService) ListPodSandbox(ctx context.Context, r *runtime.ListPodSandb
 	sandboxesInStore := c.sandboxStore.List()
 	var sandboxes []*runtime.PodSandbox
 	for _, sandboxInStore := range sandboxesInStore {
-		sandboxes = append(sandboxes, toCRISandbox(
+		sandbox := toCRISandbox(
 			sandboxInStore.Metadata,
 			sandboxInStore.Status.Get(),
-		))
+		)
+		if unlisted, _ := criutil.Unlisted(ctx); sandbox.Labels != nil {
+			if ns, ok := sandbox.Labels[criutil.UnlistedLabel]; ok && ns != unlisted {
+				continue
+			}
+		}
+		sandboxes = append(sandboxes, sandbox)
 	}
 
 	sandboxes = c.filterCRISandboxes(sandboxes, r.GetFilter())

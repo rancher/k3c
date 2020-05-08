@@ -4,7 +4,8 @@ go 1.13
 
 replace (
 	github.com/containerd/containerd => github.com/dweomer/containerd v1.3.5-0.20200416225531-efdd59c500bf // v1.3.4+k3c.1
-	github.com/containerd/cri => github.com/dweomer/cri v1.3.1-0.20200501231243-e8677cd6a496 // v1.3.0+k3c.8
+	github.com/containerd/cri => github.com/dweomer/cri v1.11.1-0.20200508215717-5a3b30567ad1 // v1.3.0+k3c.9+unlisted
+	//github.com/containerd/cri => /go/src/github.com/containerd/cri
 	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20200223014041-6b972e50feee
 	github.com/docker/docker => github.com/docker/docker v1.4.2-0.20200227233006-38f52c9fec82
 	github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
@@ -63,7 +64,6 @@ require (
 	github.com/moby/buildkit v0.0.0
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/opencontainers/runtime-spec v1.0.2-0.20200307132014-f49fed0d6290 // indirect
-	github.com/pborman/uuid v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman/v2 v2.0.0-20200111044641-76fd7a67396a
 	github.com/rancher/wrangler v0.5.0

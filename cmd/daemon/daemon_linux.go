@@ -1,18 +1,17 @@
 package daemon
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 
-	"github.com/rancher/k3c/pkg/daemon/services/buildkit"
-
 	"github.com/containerd/containerd/cmd/containerd/command"
 	"github.com/containerd/containerd/plugin"
+	"github.com/containerd/cri"
+	criconfig "github.com/containerd/cri/pkg/config"
 	"github.com/rancher/k3c/pkg/daemon"
 	"github.com/rancher/k3c/pkg/daemon/config"
-	k3c "github.com/rancher/k3c/pkg/defaults"
+	"github.com/rancher/k3c/pkg/daemon/services/buildkit"
 	"github.com/sirupsen/logrus"
 	cliv1 "github.com/urfave/cli"
 	cliv2 "github.com/urfave/cli/v2"
@@ -88,13 +87,6 @@ the backend to support the Docker work-alike frontend of k3c.`
 			Usage:       "containerd-style image ref to install",
 			Destination: &daemon.Config.BootstrapImage,
 		},
-		cliv1.StringFlag{
-			Name:        "bootstrap-namespace",
-			Value:       config.DefaultBootstrapNamespace,
-			EnvVar:      "K3C_BOOTSTRAP_NAMESPACE",
-			Destination: &daemon.Config.BootstrapNamespace,
-			Hidden:      true,
-		},
 	}...)
 	defaultBootstrapSkip := true
 	requiredExecutables := map[string]string{
@@ -110,13 +102,10 @@ the backend to support the Docker work-alike frontend of k3c.`
 		"socat":                   "", // cri
 	}
 	for bin := range requiredExecutables {
-		msg := "k3c bootstrap check"
 		if path, err := exec.LookPath(bin); err != nil {
 			defaultBootstrapSkip = false
-			logrus.WithError(err).Warn(msg)
 		} else {
 			requiredExecutables[bin] = path
-			logrus.WithField("found", path).Debug(msg)
 		}
 	}
 	if defaultBootstrapSkip {
@@ -138,19 +127,19 @@ the backend to support the Docker work-alike frontend of k3c.`
 		cliv1.StringFlag{
 			Name:        "cni-bin",
 			EnvVar:      "K3C_CNI_BIN",
-			Destination: &daemon.Config.Namespace.NetworkPluginBinDir,
+			Destination: &cri.Config.NetworkPluginBinDir,
 		},
 		cliv1.StringFlag{
 			Name:        "cni-netconf",
 			EnvVar:      "K3C_CNI_NETCONF",
-			Destination: &daemon.Config.Namespace.NetworkPluginConfDir,
+			Destination: &cri.Config.NetworkPluginConfDir,
 		},
 		cliv1.StringFlag{
 			Name:        "sandbox-image",
 			Value:       config.DefaultSandboxImage,
 			EnvVar:      "K3C_SANDBOX_IMAGE",
 			Usage:       "containerd-style image ref for sandboxes",
-			Destination: &daemon.Config.Namespace.SandboxImage,
+			Destination: &cri.Config.SandboxImage,
 		},
 	}...)
 	app.Before = func(before cliv1.BeforeFunc) cliv1.BeforeFunc {
@@ -179,42 +168,53 @@ the backend to support the Docker work-alike frontend of k3c.`
 			// setup cfg
 			var (
 				root = clx.GlobalString("root")
-				path = filepath.Join(clx.GlobalString("root"), fmt.Sprintf("%s.cri", plugin.GRPCPlugin), "namespaces", k3c.DefaultNamespace, "config.toml")
 			)
-			if daemon.Config.Namespace.NetworkPluginBinDir == "" {
-				daemon.Config.Namespace.NetworkPluginBinDir = filepath.Join(root, "bin")
+			if cniBin := clx.GlobalString("cni-bin"); cniBin == "" {
+				cri.Config.NetworkPluginBinDir = filepath.Join(root, "bin")
+			} else {
+				cri.Config.NetworkPluginBinDir = cniBin
 			}
-			if daemon.Config.Namespace.NetworkPluginConfDir == "" {
-				daemon.Config.Namespace.NetworkPluginConfDir = filepath.Join(root, "etc", "cni", "net.d")
+			if cniNetConf := clx.GlobalString("cni-netconf"); cniNetConf == "" {
+				cri.Config.NetworkPluginConfDir = filepath.Join(root, "etc", "cni", "net.d")
+			} else {
+				cri.Config.NetworkPluginConfDir = cniNetConf
+			}
+			cri.Config.DefaultRuntimeName = "runc"
+			cri.Config.Runtimes = map[string]criconfig.Runtime{
+				cri.Config.DefaultRuntimeName: {
+					Type: plugin.RuntimeRuncV2,
+				},
 			}
 			buildkit.Config.Workers.Containerd.NetworkConfig.Mode = "cni"
-			buildkit.Config.Workers.Containerd.NetworkConfig.CNIBinaryPath = daemon.Config.Namespace.NetworkPluginBinDir
-			buildkit.Config.Workers.Containerd.NetworkConfig.CNIConfigPath = filepath.Join(daemon.Config.Namespace.NetworkPluginConfDir, "90-k3c.json")
+			buildkit.Config.Workers.Containerd.NetworkConfig.CNIBinaryPath = cri.Config.NetworkPluginBinDir
+			buildkit.Config.Workers.Containerd.NetworkConfig.CNIConfigPath = filepath.Join(cri.Config.NetworkPluginConfDir, "90-k3c.json")
 
-			if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-				return err
-			}
-			if err := config.WriteFileTOML(path, &daemon.Config.Namespace, 0600); err != nil {
-				return err
-			}
-			if err := os.MkdirAll(daemon.Config.Namespace.NetworkPluginBinDir, 0700); err != nil {
+			if err := os.MkdirAll(cri.Config.NetworkPluginBinDir, 0700); err != nil {
 				return err
 			}
 			if defaultBootstrapSkip {
 				// the symlinking is to make buildkit happy
 				for bin, path := range requiredExecutables {
-					if err := os.Symlink(path, filepath.Join(daemon.Config.Namespace.NetworkPluginBinDir, bin)); err != nil {
+					if err := os.Symlink(path, filepath.Join(cri.Config.NetworkPluginBinDir, bin)); err != nil {
 						logrus.WithError(err).Warn("k3s bootstrap skip")
 					}
 				}
+			} else {
+				for bin, path := range requiredExecutables {
+					if path == "" {
+						logrus.WithField("executable", bin).Warn("k3c bootstrap check: missing")
+					} else {
+						logrus.WithField("executable", bin).Debug("k3c bootstrap check: found")
+					}
+				}
 			}
-			if err := os.MkdirAll(daemon.Config.Namespace.NetworkPluginConfDir, 0700); err != nil {
+			if err := os.MkdirAll(cri.Config.NetworkPluginConfDir, 0700); err != nil {
 				return err
 			}
 			if err := config.WriteFileJSON(buildkit.Config.Workers.Containerd.NetworkConfig.CNIConfigPath, config.DefaultCniConf(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
 				return err
 			}
-			if err := config.WriteFileJSON(filepath.Join(daemon.Config.Namespace.NetworkPluginConfDir, "90-k3c.conflist"), config.DefaultCniConflist(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
+			if err := config.WriteFileJSON(filepath.Join(cri.Config.NetworkPluginConfDir, "90-k3c.conflist"), config.DefaultCniConflist(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
 				return err
 			}
 

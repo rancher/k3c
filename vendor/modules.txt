@@ -156,7 +156,7 @@ github.com/containerd/continuity/pathdriver
 github.com/containerd/continuity/proto
 github.com/containerd/continuity/syscallx
 github.com/containerd/continuity/sysx
-# github.com/containerd/cri v1.11.1-0.20200320165605-f864905c93b9 => github.com/dweomer/cri v1.3.1-0.20200501231243-e8677cd6a496
+# github.com/containerd/cri v1.11.1-0.20200320165605-f864905c93b9 => github.com/dweomer/cri v1.11.1-0.20200508215717-5a3b30567ad1
 github.com/containerd/cri
 github.com/containerd/cri/pkg/annotations
 github.com/containerd/cri/pkg/api/runtimeoptions/v1
@@ -442,8 +442,6 @@ github.com/opentracing-contrib/go-stdlib/nethttp
 github.com/opentracing/opentracing-go
 github.com/opentracing/opentracing-go/ext
 github.com/opentracing/opentracing-go/log
-# github.com/pborman/uuid v1.2.0
-github.com/pborman/uuid
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/prometheus/client_golang v1.1.0

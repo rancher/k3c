@@ -6,6 +6,9 @@ import (
 
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
+	cns "github.com/containerd/containerd/namespaces"
+	criutil "github.com/containerd/cri/pkg/containerd/util"
+	"github.com/rancher/k3c/pkg/defaults"
 	api "github.com/rancher/k3c/pkg/remote/apis/k3c/v1alpha1"
 )
 
@@ -30,6 +33,7 @@ func (w *wrapper) ListPods(ctx context.Context, req *api.ListPodsRequest) (res *
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -46,6 +50,7 @@ func (w *wrapper) CreatePod(ctx context.Context, req *api.CreatePodRequest) (res
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -62,6 +67,7 @@ func (w *wrapper) Attach(ctx context.Context, req *api.AttachRequest) (res *api.
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -78,6 +84,7 @@ func (w *wrapper) Exec(ctx context.Context, req *api.ExecRequest) (res *api.Stre
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -94,6 +101,7 @@ func (w *wrapper) CreateContainer(ctx context.Context, req *api.CreateContainerR
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -110,6 +118,7 @@ func (w *wrapper) StartContainer(ctx context.Context, req *api.StartContainerReq
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -126,6 +135,7 @@ func (w *wrapper) StopContainer(ctx context.Context, req *api.StopContainerReque
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -142,6 +152,7 @@ func (w *wrapper) RemoveContainer(ctx context.Context, req *api.RemoveContainerR
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -158,6 +169,7 @@ func (w *wrapper) GetContainer(ctx context.Context, req *api.GetContainerRequest
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -171,10 +183,10 @@ func (w *wrapper) GetContainer(ctx context.Context, req *api.GetContainerRequest
 }
 
 func (w *wrapper) LogContainer(req *api.LogContainerRequest, res api.ContainerService_LogContainerServer) (err error) {
-	ctx := res.Context()
 	if err := w.checkInitialized(); err != nil {
 		return err
 	}
+	ctx := criutil.WithUnlisted(cns.WithNamespace(res.Context(), defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -191,6 +203,7 @@ func (w *wrapper) ListImages(ctx context.Context, req *api.ListImagesRequest) (r
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -207,6 +220,7 @@ func (w *wrapper) RemoveImage(ctx context.Context, req *api.RemoveImageRequest) 
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -223,6 +237,7 @@ func (w *wrapper) PullImage(ctx context.Context, req *api.PullImageRequest) (res
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -239,6 +254,7 @@ func (w *wrapper) PushImage(ctx context.Context, req *api.PushImageRequest) (res
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -255,6 +271,7 @@ func (w *wrapper) GetImage(ctx context.Context, req *api.GetImageRequest) (res *
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -271,6 +288,7 @@ func (w *wrapper) TagImage(ctx context.Context, req *api.TagImageRequest) (res *
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -284,10 +302,10 @@ func (w *wrapper) TagImage(ctx context.Context, req *api.TagImageRequest) (res *
 }
 
 func (w *wrapper) PullProgress(req *api.InfoRequest, res api.ContainerService_PullProgressServer) (err error) {
-	ctx := res.Context()
 	if err := w.checkInitialized(); err != nil {
 		return err
 	}
+	ctx := criutil.WithUnlisted(cns.WithNamespace(res.Context(), defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -301,10 +319,10 @@ func (w *wrapper) PullProgress(req *api.InfoRequest, res api.ContainerService_Pu
 }
 
 func (w *wrapper) PushProgress(req *api.InfoRequest, res api.ContainerService_PushProgressServer) (err error) {
-	ctx := res.Context()
 	if err := w.checkInitialized(); err != nil {
 		return err
 	}
+	ctx := criutil.WithUnlisted(cns.WithNamespace(res.Context(), defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -321,6 +339,7 @@ func (w *wrapper) ListVolumes(ctx context.Context, req *api.ListVolumesRequest) 
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -337,6 +356,7 @@ func (w *wrapper) CreateVolume(ctx context.Context, req *api.CreateVolumeRequest
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -353,6 +373,7 @@ func (w *wrapper) RemoveVolume(ctx context.Context, req *api.RemoveVolumeRequest
 	if err := w.checkInitialized(); err != nil {
 		return nil, err
 	}
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {
@@ -366,10 +387,10 @@ func (w *wrapper) RemoveVolume(ctx context.Context, req *api.RemoveVolumeRequest
 }
 
 func (w *wrapper) Events(req *api.EventsRequest, res api.ContainerService_EventsServer) (err error) {
-	ctx := res.Context()
 	if err := w.checkInitialized(); err != nil {
 		return err
 	}
+	ctx := criutil.WithUnlisted(cns.WithNamespace(res.Context(), defaults.PublicNamespace), defaults.PrivateNamespace)
 	log.G(ctx).Tracef("%+v", req)
 	defer func() {
 		if err != nil {

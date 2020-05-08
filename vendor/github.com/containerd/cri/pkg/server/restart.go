@@ -278,7 +278,7 @@ func (c *criService) loadContainer(ctx context.Context, cntr containerd.Containe
 				}
 				// Wait for the task for exit monitor.
 				// wait is a long running background request, no timeout needed.
-				exitCh, err := t.Wait(ctrdutil.NamespacedContext(c.name))
+				exitCh, err := t.Wait(ctrdutil.NamespacedContext())
 				if err != nil {
 					if !errdefs.IsNotFound(err) {
 						return errors.Wrap(err, "failed to wait for task")
@@ -290,7 +290,7 @@ func (c *criService) loadContainer(ctx context.Context, cntr containerd.Containe
 					status.Reason = unknownExitReason
 				} else {
 					// Start exit monitor.
-					c.eventMonitor.startExitMonitor(ctrdutil.NamespacedContext(c.name), id, status.Pid, exitCh)
+					c.eventMonitor.startExitMonitor(context.Background(), id, status.Pid, exitCh)
 				}
 			case containerd.Stopped:
 				// Task is stopped. Updata status and delete the task.
@@ -307,9 +307,7 @@ func (c *criService) loadContainer(ctx context.Context, cntr containerd.Containe
 	}()
 	if err != nil {
 		log.G(ctx).WithError(err).Errorf("Failed to load container status for %q", id)
-		// Only set the unknown field in this case, because other fields may
-		// contain useful information loaded from the checkpoint.
-		status.Unknown = true
+		status = unknownContainerStatus()
 	}
 	opts := []containerstore.Opts{
 		containerstore.WithStatus(status, containerDir),
@@ -379,7 +377,7 @@ func (c *criService) loadSandbox(ctx context.Context, cntr containerd.Container)
 			if taskStatus.Status == containerd.Running {
 				// Wait for the task for sandbox monitor.
 				// wait is a long running background request, no timeout needed.
-				exitCh, err := t.Wait(ctrdutil.NamespacedContext(c.name))
+				exitCh, err := t.Wait(ctrdutil.NamespacedContext())
 				if err != nil {
 					if !errdefs.IsNotFound(err) {
 						return status, errors.Wrap(err, "failed to wait for task")
@@ -389,7 +387,7 @@ func (c *criService) loadSandbox(ctx context.Context, cntr containerd.Container)
 					// Task is running, set sandbox state as READY.
 					status.State = sandboxstore.StateReady
 					status.Pid = t.Pid()
-					c.eventMonitor.startExitMonitor(ctrdutil.NamespacedContext(c.name), meta.ID, status.Pid, exitCh)
+					c.eventMonitor.startExitMonitor(context.Background(), meta.ID, status.Pid, exitCh)
 				}
 			} else {
 				// Task is not running. Delete the task and set sandbox state as NOTREADY.

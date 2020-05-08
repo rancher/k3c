@@ -4,7 +4,6 @@ import (
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/plugin"
-	"github.com/containerd/containerd/remotes/docker"
 	"github.com/rancher/k3c/pkg/daemon/config"
 	"github.com/rancher/k3c/pkg/daemon/services/buildkit"
 	"github.com/rancher/k3c/pkg/pushstatus"
@@ -58,17 +57,16 @@ func PluginInitFunc(ic *plugin.InitContext) (interface{}, error) {
 	daemon := &Daemon{
 		logPath:  cfg.PodLogs,
 		pushJobs: map[string]pushstatus.Tracker{},
-		tracker:  docker.NewInMemoryTracker(),
 	}
 	// bootstrap in the foreground so that buildkit will have the binaries it needs
 	if err := daemon.bootstrap(ic); err != nil {
 		return nil, err
 	}
-	service := server.NewContainerService(daemon)
 	if err := daemon.start(ic); err != nil {
 		return nil, err
 	}
-	log.G(ic.Context).WithField("bridge", cfg.BridgeName).WithField("cidr", cfg.BridgeCIDR).Info("K3C daemon")
+	service := server.NewContainerService(daemon)
 	service.SetInitialized(true)
+	log.G(ic.Context).WithField("bridge", cfg.BridgeName).WithField("cidr", cfg.BridgeCIDR).Info("K3C daemon")
 	return service, nil
 }

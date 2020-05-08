@@ -6,8 +6,15 @@ import (
 	"context"
 	"time"
 
+	"github.com/rancher/k3c/pkg/defaults"
+
+	"github.com/containerd/cri"
+	criutil "github.com/containerd/cri/pkg/containerd/util"
+	"github.com/containerd/cri/pkg/server"
+
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
+	cns "github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/remotes"
 	"github.com/docker/distribution/reference"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -113,6 +120,7 @@ func (c *Daemon) GetImage(ctx context.Context, image string) (*client.Image, err
 }
 
 func (c *Daemon) PullProgress(ctx context.Context, image string) (<-chan []status.Info, error) {
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	result := make(chan []status.Info)
 	go func() {
 		t := time.NewTicker(time.Millisecond * 250)
@@ -159,7 +167,6 @@ func (c *Daemon) imageProgress(ctx context.Context, image string) (result []stat
 	} else if done {
 		return nil, true, nil
 	}
-
 	statuses, err := c.ctd.ContentStore().ListStatuses(ctx, "")
 	if err != nil {
 		return nil, false, err
@@ -215,6 +222,8 @@ func (c *Daemon) PullImage(ctx context.Context, image string, authConfig *client
 }
 
 func (c *Daemon) PushProgress(ctx context.Context, image string) (<-chan []status.Info, error) {
+	ctx = criutil.WithUnlisted(cns.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
+
 	timeout := time.After(time.Minute)
 
 	for {
@@ -237,11 +246,8 @@ func (c *Daemon) PushProgress(ctx context.Context, image string) (<-chan []statu
 }
 
 func (c *Daemon) PushImage(ctx context.Context, image string, authConfig *client.AuthConfig) error {
-	resolver, err := c.getResolver(ctx, authConfig)
-	if err != nil {
-		return err
-	}
-	tracker := pushstatus.NewTracker(ctx, c.tracker)
+	resolver := cri.Resolver.GetResolver(toAuth(authConfig))
+	tracker := pushstatus.NewTracker(ctx, server.Tracker)
 	c.lock.Lock()
 	c.pushJobs[image] = tracker
 	c.lock.Unlock()

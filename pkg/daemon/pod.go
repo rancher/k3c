@@ -12,10 +12,12 @@ import (
 	"strings"
 	"time"
 
+	criutil "github.com/containerd/cri/pkg/containerd/util"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/pborman/uuid"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/rancher/k3c/pkg/defaults"
 	"github.com/rancher/k3c/pkg/remote/apis/k3c/v1alpha1"
 	"github.com/rancher/wrangler/pkg/kv"
 	"github.com/sirupsen/logrus"
@@ -62,8 +64,15 @@ func (c *Daemon) CreatePod(ctx context.Context, name string, opts *v1alpha1.PodO
 	if opts == nil {
 		opts = &v1alpha1.PodOptions{}
 	}
+	if opts.Labels == nil {
+		opts.Labels = map[string]string{}
+	}
+	opts.Labels[criutil.UnlistedLabel] = defaults.PrivateNamespace
 
-	id := uuid.New()
+	uid, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
 
 	hostname := opts.Hostname
 	if hostname == "" {
@@ -83,13 +92,13 @@ func (c *Daemon) CreatePod(ctx context.Context, name string, opts *v1alpha1.PodO
 
 	logs := ""
 	if c.logPath != "" {
-		logs = filepath.Join(c.logPath, fmt.Sprintf("%s_%s_%s", "k3c", name, id))
+		logs = filepath.Join(c.logPath, fmt.Sprintf("%s_%s_%s", "k3c", name, uid))
 	}
 
 	config := &pb.PodSandboxConfig{
 		Metadata: &pb.PodSandboxMetadata{
 			Name:      name,
-			Uid:       id,
+			Uid:       uid.String(),
 			Namespace: "k3c",
 		},
 		Hostname:     hostname,
@@ -174,7 +183,13 @@ func (c *Daemon) gc(ctx context.Context) {
 }
 
 func (c *Daemon) runGC(ctx context.Context) error {
-	resp, err := c.crt.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{})
+	resp, err := c.crt.ListPodSandbox(ctx, &pb.ListPodSandboxRequest{
+		Filter: &pb.PodSandboxFilter{
+			LabelSelector: map[string]string{
+				criutil.UnlistedLabel: defaults.PrivateNamespace,
+			},
+		},
+	})
 	if err != nil {
 		return err
 	}
@@ -183,8 +198,13 @@ func (c *Daemon) runGC(ctx context.Context) error {
 	for _, pod := range resp.Items {
 		pods[pod.Id] = 0
 	}
-
-	cResp, err := c.crt.ListContainers(ctx, &pb.ListContainersRequest{})
+	cResp, err := c.crt.ListContainers(ctx, &pb.ListContainersRequest{
+		Filter: &pb.ContainerFilter{
+			LabelSelector: map[string]string{
+				criutil.UnlistedLabel: defaults.PrivateNamespace,
+			},
+		},
+	})
 	if err != nil {
 		return err
 	}
@@ -207,7 +227,7 @@ func (c *Daemon) runGC(ctx context.Context) error {
 	var lastErr error
 	for podID, count := range pods {
 		if count == 0 {
-			logrus.Infof("Removing pod %s", podID)
+			logrus.Debugf("Removing pod %s", podID)
 			_, err := c.crt.StopPodSandbox(ctx, &pb.StopPodSandboxRequest{
 				PodSandboxId: podID,
 			})

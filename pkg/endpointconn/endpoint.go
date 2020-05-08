@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/rancher/k3c/pkg/defaults"
 	"google.golang.org/grpc"
 )
 
@@ -18,8 +17,10 @@ func Get(ctx context.Context, endpoint string, dialOpts ...grpc.DialOption) (*gr
 	if err != nil {
 		return nil, err
 	}
-	unary, stream := newNSInterceptors(defaults.DefaultNamespace)
-	conn, err := grpc.DialContext(ctx, target, append(dialOpts, grpc.WithContextDialer(dialer), grpc.WithUnaryInterceptor(unary), grpc.WithStreamInterceptor(stream))...)
+	dialOpts = append(dialOpts, grpc.WithContextDialer(dialer))
+	//unary, stream := newNSInterceptors(defaults.PrivateNamespace)
+	//dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(unary), grpc.WithStreamInterceptor(stream))
+	conn, err := grpc.DialContext(ctx, target, dialOpts...)
 	if err != nil {
 		return nil, err
 	}
