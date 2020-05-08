@@ -41,7 +41,7 @@ github.com/containerd/aufs
 github.com/containerd/cgroups
 # github.com/containerd/console v1.0.0
 github.com/containerd/console
-# github.com/containerd/containerd v1.3.4 => github.com/dweomer/containerd v1.3.5-0.20200416225531-efdd59c500bf
+# github.com/containerd/containerd v1.3.4 => github.com/dweomer/containerd v1.3.5-0.20200508232507-1139e11acb7b
 github.com/containerd/containerd
 github.com/containerd/containerd/api/events
 github.com/containerd/containerd/api/services/containers/v1

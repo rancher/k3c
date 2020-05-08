@@ -203,6 +203,8 @@ github.com/dweomer/buildkit v0.6.2-0.20200111044149-7562b84375e4 h1:elGAKv3EqtjD
 github.com/dweomer/buildkit v0.6.2-0.20200111044149-7562b84375e4/go.mod h1:auJm/pdcHzciwG36is9O1A3kj+jJ3kc2wLdYIsBJj9g=
 github.com/dweomer/containerd v1.3.5-0.20200416225531-efdd59c500bf h1:2WbvYKDor5keKmBb3nOVr1YLIiufdPWyk3ul1N+y5iU=
 github.com/dweomer/containerd v1.3.5-0.20200416225531-efdd59c500bf/go.mod h1:2om0pJ92LKVun0Yn9IKZEGb/ebwvFSH5zKPt2YB7ILE=
+github.com/dweomer/containerd v1.3.5-0.20200508232507-1139e11acb7b h1:F91YE0cKw+AC/fA+6Z4gSwZzz0XNDFXTGkIyWvvObA0=
+github.com/dweomer/containerd v1.3.5-0.20200508232507-1139e11acb7b/go.mod h1:2om0pJ92LKVun0Yn9IKZEGb/ebwvFSH5zKPt2YB7ILE=
 github.com/dweomer/cri v1.11.1-0.20200508215717-5a3b30567ad1 h1:0xuYXC8rEnO56oOsriSomInG/FZ/tkV7lZnJQV1MTJo=
 github.com/dweomer/cri v1.11.1-0.20200508215717-5a3b30567ad1/go.mod h1:itvTywBS8wRcflCqlgX7shxq5Sp9H81Gk+nelbUmUB8=
 github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e h1:p1yVGRW3nmb85p1Sh1ZJSDm4A4iKLS5QNbvUHMgGu/M=

@@ -1,9 +1,13 @@
 package daemon
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+
+	"github.com/containerd/containerd/services/opt"
 
 	"github.com/containerd/containerd/cmd/containerd/command"
 	"github.com/containerd/containerd/plugin"
@@ -53,6 +57,7 @@ the backend to support the Docker work-alike frontend of k3c.`
 			if sf, ok := flag.(cliv1.StringFlag); ok {
 				sf.Value = config.DefaultDaemonRootDir
 				sf.EnvVar = "K3C_ROOT"
+				sf.Destination = &opt.PluginConfig.Path
 				app.Flags[i] = sf
 			} else {
 				logrus.Warnf("unexpected type for flag %q = %#v", flag.GetName(), flag)
@@ -148,7 +153,7 @@ the backend to support the Docker work-alike frontend of k3c.`
 			for i := range clx.App.Flags {
 				var (
 					f = clx.App.Flags[i]
-					n = f.GetName()
+					n = strings.SplitN(f.GetName(), `,`, 2)[0]
 					e string
 				)
 				switch t := f.(type) {
@@ -192,20 +197,16 @@ the backend to support the Docker work-alike frontend of k3c.`
 			if err := os.MkdirAll(cri.Config.NetworkPluginBinDir, 0700); err != nil {
 				return err
 			}
-			if defaultBootstrapSkip {
-				// the symlinking is to make buildkit happy
-				for bin, path := range requiredExecutables {
-					if err := os.Symlink(path, filepath.Join(cri.Config.NetworkPluginBinDir, bin)); err != nil {
+			for exe, loc := range requiredExecutables {
+				if defaultBootstrapSkip {
+					// the symlinking is to make buildkit happy
+					if err := os.Symlink(loc, filepath.Join(cri.Config.NetworkPluginBinDir, exe)); err != nil {
 						logrus.WithError(err).Warn("k3s bootstrap skip")
 					}
-				}
-			} else {
-				for bin, path := range requiredExecutables {
-					if path == "" {
-						logrus.WithField("executable", bin).Warn("k3c bootstrap check: missing")
-					} else {
-						logrus.WithField("executable", bin).Debug("k3c bootstrap check: found")
-					}
+				} else if loc == "" {
+					logrus.WithField("executable", exe).Warn("k3c bootstrap check: missing")
+				} else {
+					logrus.WithField("executable", exe).WithField("location", loc).Debug("k3c bootstrap check: found")
 				}
 			}
 			if err := os.MkdirAll(cri.Config.NetworkPluginConfDir, 0700); err != nil {
@@ -217,7 +218,9 @@ the backend to support the Docker work-alike frontend of k3c.`
 			if err := config.WriteFileJSON(filepath.Join(cri.Config.NetworkPluginConfDir, "90-k3c.conflist"), config.DefaultCniConflist(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
 				return err
 			}
-
+			if err := os.Setenv("PATH", fmt.Sprintf("%s%c%s", os.Getenv("PATH"), os.PathListSeparator, filepath.Join(root, "bin", "aux"))); err != nil {
+				return err
+			}
 			if before != nil {
 				return before(clx)
 			}
