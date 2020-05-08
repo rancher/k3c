@@ -21,10 +21,9 @@ var (
 	DefaultDaemonStateDir   = defaults.DefaultStateDir
 	DefaultDaemonAddress    = DefaultDaemonStateDir + filepath.Base(defaults.DefaultAddress)
 
-	DefaultBridgeName         = defaults.DefaultBridgeName
-	DefaultBridgeCIDR         = defaults.DefaultBridgeCIDR
-	DefaultBootstrapNamespace = defaults.BootstrapNamespace
-	DefaultBootstrapImage     = "docker.io/rancher/k3c:dev"
+	DefaultBridgeName     = defaults.DefaultBridgeName
+	DefaultBridgeCIDR     = defaults.DefaultBridgeCIDR
+	DefaultBootstrapImage = "docker.io/rancher/k3c:latest"
 
 	DefaultSandboxImage = defaults.DefaultSandboxImage
 	DefaultPodLogsDir   = defaults.DefaultPodLogsDir
@@ -32,14 +31,13 @@ var (
 )
 
 type K3Config struct {
-	BootstrapSkip      bool             `toml:"bootstrap_skip"`
-	BootstrapImage     string           `toml:"bootstrap_image"`
-	BootstrapNamespace string           `toml:"bootstrap_namespace"`
-	BridgeName         string           `toml:"bridge_name"`
-	BridgeCIDR         string           `toml:"bridge_cidr"`
-	PodLogs            string           `toml:"pod_logs"`
-	Volumes            string           `toml:"volumes"`
-	Namespace          cri.PluginConfig `toml:"namespace"`
+	BootstrapSkip  bool             `toml:"bootstrap_skip"`
+	BootstrapImage string           `toml:"bootstrap_image"`
+	BridgeName     string           `toml:"bridge_name"`
+	BridgeCIDR     string           `toml:"bridge_cidr"`
+	PodLogs        string           `toml:"pod_logs"`
+	Volumes        string           `toml:"volumes"`
+	CRI            cri.PluginConfig `toml:"cri"`
 }
 
 func DefaultBuildkitConfig() *buildkit.Config {
@@ -50,7 +48,7 @@ func DefaultBuildkitConfig() *buildkit.Config {
 		Platforms: []string{
 			platforms.DefaultString(),
 		},
-		Namespace: defaults.DefaultNamespace,
+		Namespace: defaults.PrivateNamespace,
 	}
 	config.Workers.Containerd.NetworkConfig.Mode = "cni"
 	return &config
@@ -58,22 +56,21 @@ func DefaultBuildkitConfig() *buildkit.Config {
 
 func DefaultK3Config() *K3Config {
 	config := &K3Config{
-		BridgeName:         DefaultBridgeName,
-		BridgeCIDR:         DefaultBridgeCIDR,
-		BootstrapNamespace: DefaultBootstrapNamespace,
-		BootstrapImage:     DefaultBootstrapImage,
-		PodLogs:            DefaultPodLogsDir,
-		Volumes:            DefaultVolumesDir,
-		Namespace:          cri.DefaultServiceConfig(defaults.DefaultNamespace),
+		BridgeName:     DefaultBridgeName,
+		BridgeCIDR:     DefaultBridgeCIDR,
+		BootstrapImage: DefaultBootstrapImage,
+		PodLogs:        DefaultPodLogsDir,
+		Volumes:        DefaultVolumesDir,
+		CRI:            cri.DefaultConfig(),
 	}
-	config.Namespace.SandboxImage = DefaultSandboxImage
-	config.Namespace.DefaultRuntimeName = "runc"
-	config.Namespace.Runtimes = map[string]cri.Runtime{
-		config.Namespace.DefaultRuntimeName: {
+	config.CRI.SandboxImage = DefaultSandboxImage
+	config.CRI.DefaultRuntimeName = "runc"
+	config.CRI.Runtimes = map[string]cri.Runtime{
+		config.CRI.DefaultRuntimeName: {
 			Type: plugin.RuntimeRuncV2,
 		},
 	}
-	config.Namespace.NetworkPluginMaxConfNum = 1
+	config.CRI.NetworkPluginMaxConfNum = 1
 	return config
 }
 

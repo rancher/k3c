@@ -17,22 +17,18 @@ limitations under the License.
 package server
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/events"
-	"github.com/containerd/containerd/events/exchange"
-	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/plugin"
-	"github.com/containerd/containerd/remotes"
-	"github.com/containerd/containerd/remotes/docker"
-	"github.com/containerd/go-cni"
+	"github.com/containerd/cri/pkg/store/label"
+	cni "github.com/containerd/go-cni"
+	runcapparmor "github.com/opencontainers/runc/libcontainer/apparmor"
+	runcseccomp "github.com/opencontainers/runc/libcontainer/seccomp"
 	runcsystem "github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/pkg/errors"
@@ -43,6 +39,7 @@ import (
 
 	"github.com/containerd/cri/pkg/atomic"
 	criconfig "github.com/containerd/cri/pkg/config"
+	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
 	osinterface "github.com/containerd/cri/pkg/os"
 	"github.com/containerd/cri/pkg/registrar"
 	containerstore "github.com/containerd/cri/pkg/store/container"
@@ -59,30 +56,23 @@ type grpcServices interface {
 
 // CRIService is the interface implement CRI remote service server.
 type CRIService interface {
-	GetResolver(context.Context, *runtime.AuthConfig, docker.StatusTracker) (remotes.Resolver, error)
-	Run(context.Context) error
+	Run() error
 	// io.Closer is used by containerd to gracefully stop cri service.
 	io.Closer
 	plugin.Service
 	grpcServices
 }
 
-var _ grpcServices = &criService{}
-
-type serviceConfig struct {
-	criconfig.PluginConfig
-	RootDir  string
-	StateDir string
-}
-
 // criService implements CRIService.
 type criService struct {
-	// name is the namespace name
-	name string
-	// config contains namespace/service configuration.
-	config serviceConfig
+	// config contains all configurations.
+	config criconfig.Config
 	// imageFSPath is the path to image filesystem.
 	imageFSPath string
+	// apparmorEnabled indicates whether apparmor is enabled.
+	apparmorEnabled bool
+	// seccompEnabled indicates whether seccomp is enabled.
+	seccompEnabled bool
 	// os is an interface for all required os operations.
 	os osinterface.OS
 	// sandboxStore stores all resources associated with sandboxes.
@@ -110,26 +100,29 @@ type criService struct {
 	// initialized indicates whether the server is initialized. All GRPC services
 	// should return error before the server is initialized.
 	initialized atomic.Bool
-	// close once
-	close sync.Once
 }
 
 // NewCRIService returns a new instance of CRIService
 func NewCRIService(config criconfig.Config, client *containerd.Client) (CRIService, error) {
-	//var err error
-	c := &criServiceManager{
-		config: config,
-		client: client,
-		os:     osinterface.RealOS{},
-		ex:     exchange.NewExchange(),
-	}
-
-	if client.SnapshotService(c.config.ContainerdConfig.Snapshotter) == nil {
-		return nil, errors.Errorf("failed to find snapshotter %q", c.config.ContainerdConfig.Snapshotter)
+	var err error
+	labels := label.NewStore()
+	c := &criService{
+		config:             config,
+		client:             client,
+		apparmorEnabled:    runcapparmor.IsEnabled() && !config.DisableApparmor,
+		seccompEnabled:     runcseccomp.IsEnabled(),
+		os:                 osinterface.RealOS{},
+		sandboxStore:       sandboxstore.NewStore(labels),
+		containerStore:     containerstore.NewStore(labels),
+		imageStore:         imagestore.NewStore(client),
+		snapshotStore:      snapshotstore.NewStore(),
+		sandboxNameIndex:   registrar.NewRegistrar(),
+		containerNameIndex: registrar.NewRegistrar(),
+		initialized:        atomic.NewBool(false),
 	}
 
 	if runcsystem.RunningInUserNS() {
-		if !(config.DisableCgroup && !c.apparmorEnabled() && config.RestrictOOMScoreAdj) {
+		if !(config.DisableCgroup && !c.apparmorEnabled && config.RestrictOOMScoreAdj) {
 			logrus.Warn("Running containerd in a user namespace typically requires disable_cgroup, disable_apparmor, restrict_oom_score_adj set to be true")
 		}
 	}
@@ -142,63 +135,95 @@ func NewCRIService(config criconfig.Config, client *containerd.Client) (CRIServi
 		selinux.SetDisabled()
 	}
 
+	if client.SnapshotService(c.config.ContainerdConfig.Snapshotter) == nil {
+		return nil, errors.Errorf("failed to find snapshotter %q", c.config.ContainerdConfig.Snapshotter)
+	}
+
+	c.imageFSPath = imageFSPath(config.ContainerdRootDir, config.ContainerdConfig.Snapshotter)
+	logrus.Infof("Get image filesystem path %q", c.imageFSPath)
+
+	// Pod needs to attach to atleast loopback network and a non host network,
+	// hence networkAttachCount is 2. If there are more network configs the
+	// pod will be attached to all the networks but we will only use the ip
+	// of the default network interface as the pod IP.
+	c.netPlugin, err = cni.New(cni.WithMinNetworkCount(networkAttachCount),
+		cni.WithPluginConfDir(config.NetworkPluginConfDir),
+		cni.WithPluginMaxConfNum(config.NetworkPluginMaxConfNum),
+		cni.WithPluginDir([]string{config.NetworkPluginBinDir}))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize cni")
+	}
+
+	// Try to load the config if it exists. Just log the error if load fails
+	// This is not disruptive for containerd to panic
+	if err := c.netPlugin.Load(cni.WithLoNetwork, cni.WithDefaultConf); err != nil {
+		logrus.WithError(err).Error("Failed to load cni during init, please check CRI plugin status before setting up network for pods")
+	}
+	// prepare streaming server
+	c.streamServer, err = newStreamServer(c, config.StreamServerAddress, config.StreamServerPort, config.StreamIdleTimeout)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create stream server")
+	}
+
+	c.eventMonitor = newEventMonitor(c)
+
 	return c, nil
 }
 
 // Register registers all required services onto a specific grpc server.
 // This is used by containerd cri plugin.
-func (c *criServiceManager) Register(s *grpc.Server) error {
+func (c *criService) Register(s *grpc.Server) error {
 	return c.register(s)
 }
 
 // RegisterTCP register all required services onto a GRPC server on TCP.
 // This is used by containerd CRI plugin.
-func (c *criServiceManager) RegisterTCP(s *grpc.Server) error {
+func (c *criService) RegisterTCP(s *grpc.Server) error {
 	if !c.config.DisableTCPService {
 		return c.register(s)
 	}
 	return nil
 }
 
-// Run the CRI namespaced service.
-func (c *criService) Run(ctx context.Context, subscriber events.Subscriber) (err error) {
-	log.G(ctx).Info("Start subscribing containerd event")
-	c.eventMonitor.subscribe(subscriber)
+// Run starts the CRI service.
+func (c *criService) Run() error {
+	logrus.Info("Start subscribing containerd event")
+	c.eventMonitor.subscribe(c.client)
 
-	log.G(ctx).Infof("Start recovering state")
-	if err := c.recover(ctx); err != nil {
+	logrus.Infof("Start recovering state")
+	if err := c.recover(ctrdutil.NamespacedContext()); err != nil {
 		return errors.Wrap(err, "failed to recover state")
 	}
 
 	// Start event handler.
-	log.G(ctx).Info("Start event monitor")
+	logrus.Info("Start event monitor")
 	eventMonitorErrCh := c.eventMonitor.start()
 
 	// Start snapshot stats syncer, it doesn't need to be stopped.
-	log.G(ctx).Info("Start snapshots syncer")
+	logrus.Info("Start snapshots syncer")
 	snapshotsSyncer := newSnapshotsSyncer(
 		c.snapshotStore,
 		c.client.SnapshotService(c.config.ContainerdConfig.Snapshotter),
 		time.Duration(c.config.StatsCollectPeriod)*time.Second,
 	)
-	snapshotsSyncer.start(ctx)
+	snapshotsSyncer.start()
 
 	// Start streaming server.
-	log.G(ctx).Info("Start streaming server")
+	logrus.Info("Start streaming server")
 	streamServerErrCh := make(chan error)
 	go func() {
 		defer close(streamServerErrCh)
 		if err := c.streamServer.Start(true); err != nil && err != http.ErrServerClosed {
-			log.G(ctx).WithError(err).Error("Failed to start streaming server")
+			logrus.WithError(err).Error("Failed to start streaming server")
 			streamServerErrCh <- err
 		}
 	}()
 
-	// Set the service as initialized. GRPC services could start serving traffic.
+	// Set the server as initialized. GRPC services could start serving traffic.
 	c.initialized.Set()
 
 	var eventMonitorErr, streamServerErr error
-	// Stop the CRI service if any of the critical service exits.
+	// Stop the whole CRI service if any of the critical service exits.
 	select {
 	case eventMonitorErr = <-eventMonitorErrCh:
 	case streamServerErr = <-streamServerErrCh:
@@ -211,7 +236,7 @@ func (c *criService) Run(ctx context.Context, subscriber events.Subscriber) (err
 	if err := <-eventMonitorErrCh; err != nil {
 		eventMonitorErr = err
 	}
-	log.G(ctx).Info("Event monitor stopped")
+	logrus.Info("Event monitor stopped")
 	// There is a race condition with http.Server.Serve.
 	// When `Close` is called at the same time with `Serve`, `Close`
 	// may finish first, and `Serve` may still block.
@@ -226,9 +251,9 @@ func (c *criService) Run(ctx context.Context, subscriber events.Subscriber) (err
 		if err != nil {
 			streamServerErr = err
 		}
-		log.G(ctx).Info("Stream server stopped")
+		logrus.Info("Stream server stopped")
 	case <-time.After(streamServerStopTimeout):
-		log.G(ctx).Errorf("Stream server is not stopped in %q", streamServerStopTimeout)
+		logrus.Errorf("Stream server is not stopped in %q", streamServerStopTimeout)
 	}
 	if eventMonitorErr != nil {
 		return errors.Wrap(eventMonitorErr, "event monitor error")
@@ -240,22 +265,20 @@ func (c *criService) Run(ctx context.Context, subscriber events.Subscriber) (err
 }
 
 // Close stops the CRI service.
+// TODO(random-liu): Make close synchronous.
 func (c *criService) Close() error {
-	logrus := log.L.WithField("ns", c.name)
-	c.close.Do(func() {
-		logrus.Info("Stop CRI namespace")
-		defer c.eventMonitor.cancel()
-		c.eventMonitor.stop()
-		if err := c.streamServer.Stop(); err != nil {
-			logrus.WithError(err).Warn("failed to stop stream server")
-		}
-	})
+	logrus.Info("Stop CRI service")
+	c.eventMonitor.stop()
+	if err := c.streamServer.Stop(); err != nil {
+		return errors.Wrap(err, "failed to stop stream server")
+	}
 	return nil
 }
 
-func (c *criServiceManager) register(s *grpc.Server) error {
-	runtime.RegisterRuntimeServiceServer(s, c)
-	runtime.RegisterImageServiceServer(s, c)
+func (c *criService) register(s *grpc.Server) error {
+	instrumented := newInstrumentedService(c)
+	runtime.RegisterRuntimeServiceServer(s, instrumented)
+	runtime.RegisterImageServiceServer(s, instrumented)
 	return nil
 }
 

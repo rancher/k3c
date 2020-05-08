@@ -27,19 +27,29 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containerd/containerd/remotes"
+
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/errdefs"
 	containerdimages "github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/remotes/docker"
+	criconfig "github.com/containerd/cri/pkg/config"
 	distribution "github.com/docker/distribution/reference"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
-
-	criconfig "github.com/containerd/cri/pkg/config"
 )
+
+var Tracker = docker.NewInMemoryTracker()
+
+func (c *criService) GetResolver(auth *runtime.AuthConfig) remotes.Resolver {
+	return docker.NewResolver(docker.ResolverOptions{
+		Hosts:   c.registryHosts(auth),
+		Tracker: Tracker,
+	})
+}
 
 // For image management:
 // 1) We have an in-memory metadata index to:
@@ -253,41 +263,39 @@ func (c *criService) updateImage(ctx context.Context, r string) error {
 // getTLSConfig returns a TLSConfig configured with a CA/Cert/Key specified by registryTLSConfig
 func (c *criService) getTLSConfig(registryTLSConfig criconfig.TLSConfig) (*tls.Config, error) {
 	var (
-		tlsConfig = &tls.Config{}
-		cert      tls.Certificate
-		err       error
+		cert tls.Certificate
+		err  error
 	)
+	if registryTLSConfig.CertFile != "" && registryTLSConfig.KeyFile != "" {
+		cert, err = tls.LoadX509KeyPair(registryTLSConfig.CertFile, registryTLSConfig.KeyFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to load cert file")
+		}
+	}
 	if registryTLSConfig.CertFile != "" && registryTLSConfig.KeyFile == "" {
 		return nil, errors.Errorf("cert file %q was specified, but no corresponding key file was specified", registryTLSConfig.CertFile)
 	}
 	if registryTLSConfig.CertFile == "" && registryTLSConfig.KeyFile != "" {
 		return nil, errors.Errorf("key file %q was specified, but no corresponding cert file was specified", registryTLSConfig.KeyFile)
 	}
-	if registryTLSConfig.CertFile != "" && registryTLSConfig.KeyFile != "" {
-		cert, err = tls.LoadX509KeyPair(registryTLSConfig.CertFile, registryTLSConfig.KeyFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to load cert file")
-		}
-		if len(cert.Certificate) != 0 {
-			tlsConfig.Certificates = []tls.Certificate{cert}
-		}
-		tlsConfig.BuildNameToCertificate()
-	}
 
-	if registryTLSConfig.CAFile != "" {
-		caCertPool, err := x509.SystemCertPool()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get system cert pool")
-		}
-		caCert, err := ioutil.ReadFile(registryTLSConfig.CAFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to load CA file")
-		}
-		caCertPool.AppendCertsFromPEM(caCert)
-		tlsConfig.RootCAs = caCertPool
+	caCertPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get system cert pool")
 	}
+	caCert, err := ioutil.ReadFile(registryTLSConfig.CAFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load CA file")
+	}
+	caCertPool.AppendCertsFromPEM(caCert)
 
-	tlsConfig.InsecureSkipVerify = registryTLSConfig.InsecureSkipVerify
+	tlsConfig := &tls.Config{
+		RootCAs: caCertPool,
+	}
+	if len(cert.Certificate) != 0 {
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+	tlsConfig.BuildNameToCertificate()
 	return tlsConfig, nil
 }
 

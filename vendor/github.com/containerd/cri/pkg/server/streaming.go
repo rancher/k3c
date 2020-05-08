@@ -17,7 +17,6 @@ limitations under the License.
 package server
 
 import (
-	"context"
 	"crypto/tls"
 	"io"
 	"math"
@@ -26,6 +25,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/net/context"
 	k8snet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/remotecommand"
@@ -66,23 +66,23 @@ func getStreamListenerMode(c *criService) (streamListenerMode, error) {
 	return withoutTLS, nil
 }
 
-func newStreamServer(c *criService) (streaming.Server, error) {
-	if c.config.StreamServerAddress == "" {
+func newStreamServer(c *criService, addr, port, streamIdleTimeout string) (streaming.Server, error) {
+	if addr == "" {
 		a, err := k8snet.ChooseHostInterface()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get stream server address")
 		}
-		c.config.StreamServerAddress = a.String()
+		addr = a.String()
 	}
 	config := streaming.DefaultConfig
-	if c.config.StreamIdleTimeout != "" {
+	if streamIdleTimeout != "" {
 		var err error
-		config.StreamIdleTimeout, err = time.ParseDuration(c.config.StreamIdleTimeout)
+		config.StreamIdleTimeout, err = time.ParseDuration(streamIdleTimeout)
 		if err != nil {
 			return nil, errors.Wrap(err, "invalid stream idle timeout")
 		}
 	}
-	config.Addr = net.JoinHostPort(c.config.StreamServerAddress, c.config.StreamServerPort)
+	config.Addr = net.JoinHostPort(addr, port)
 	run := newStreamRuntime(c)
 	tlsMode, err := getStreamListenerMode(c)
 	if err != nil {
@@ -127,7 +127,7 @@ func newStreamRuntime(c *criService) streaming.Runtime {
 // returns non-zero exit code.
 func (s *streamRuntime) Exec(containerID string, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser,
 	tty bool, resize <-chan remotecommand.TerminalSize) error {
-	exitCode, err := s.c.execInContainer(ctrdutil.NamespacedContext(s.c.name), containerID, execOptions{
+	exitCode, err := s.c.execInContainer(ctrdutil.NamespacedContext(), containerID, execOptions{
 		cmd:    cmd,
 		stdin:  stdin,
 		stdout: stdout,
@@ -149,19 +149,20 @@ func (s *streamRuntime) Exec(containerID string, cmd []string, stdin io.Reader, 
 
 func (s *streamRuntime) Attach(containerID string, in io.Reader, out, err io.WriteCloser, tty bool,
 	resize <-chan remotecommand.TerminalSize) error {
-	return s.c.attachContainer(ctrdutil.NamespacedContext(s.c.name), containerID, in, out, err, tty, resize)
+	return s.c.attachContainer(ctrdutil.NamespacedContext(), containerID, in, out, err, tty, resize)
 }
 
 func (s *streamRuntime) PortForward(podSandboxID string, port int32, stream io.ReadWriteCloser) error {
 	if port <= 0 || port > math.MaxUint16 {
 		return errors.Errorf("invalid port %d", port)
 	}
-	return s.c.portForward(ctrdutil.NamespacedContext(s.c.name), podSandboxID, port, stream)
+	return s.c.portForward(context.Background(), podSandboxID, port, stream)
 }
 
 // handleResizing spawns a goroutine that processes the resize channel, calling resizeFunc for each
-// remotecommand.TerminalSize received from the channel.
-func handleResizing(ctx context.Context, resize <-chan remotecommand.TerminalSize, resizeFunc func(size remotecommand.TerminalSize)) {
+// remotecommand.TerminalSize received from the channel. The resize channel must be closed elsewhere to stop the
+// goroutine.
+func handleResizing(resize <-chan remotecommand.TerminalSize, resizeFunc func(size remotecommand.TerminalSize)) {
 	if resize == nil {
 		return
 	}
@@ -170,18 +171,14 @@ func handleResizing(ctx context.Context, resize <-chan remotecommand.TerminalSiz
 		defer runtime.HandleCrash()
 
 		for {
-			select {
-			case <-ctx.Done():
+			size, ok := <-resize
+			if !ok {
 				return
-			case size, ok := <-resize:
-				if !ok {
-					return
-				}
-				if size.Height < 1 || size.Width < 1 {
-					continue
-				}
-				resizeFunc(size)
 			}
+			if size.Height < 1 || size.Width < 1 {
+				continue
+			}
+			resizeFunc(size)
 		}
 	}()
 }

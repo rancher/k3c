@@ -17,7 +17,6 @@ limitations under the License.
 package server
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -26,13 +25,14 @@ import (
 	containerdio "github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/events"
-	"github.com/containerd/containerd/log"
 	"github.com/containerd/typeurl"
 	gogotypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/util/clock"
 
+	"github.com/containerd/cri/pkg/constants"
 	ctrdutil "github.com/containerd/cri/pkg/containerd/util"
 	"github.com/containerd/cri/pkg/store"
 	containerstore "github.com/containerd/cri/pkg/store/container"
@@ -87,8 +87,8 @@ type backOffQueue struct {
 
 // Create new event monitor. New event monitor will start subscribing containerd event. All events
 // happen after it should be monitored.
-func newEventMonitor(ctx context.Context, c *criService) *eventMonitor {
-	ctx, cancel := context.WithCancel(ctx)
+func newEventMonitor(c *criService) *eventMonitor {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &eventMonitor{
 		c:       c,
 		ctx:     ctx,
@@ -100,12 +100,17 @@ func newEventMonitor(ctx context.Context, c *criService) *eventMonitor {
 
 // subscribe starts to subscribe containerd events.
 func (em *eventMonitor) subscribe(subscriber events.Subscriber) {
-	em.ch, em.errCh = subscriber.Subscribe(em.ctx, fmt.Sprintf(`namespace==%q`, em.c.name))
+	// note: filters are any match, if you want any match but not in namespace foo
+	// then you have to manually filter namespace foo
+	filters := []string{
+		`topic=="/tasks/oom"`,
+		`topic~="/images/"`,
+	}
+	em.ch, em.errCh = subscriber.Subscribe(em.ctx, filters...)
 }
 
 // startExitMonitor starts an exit monitor for a given container/sandbox.
 func (em *eventMonitor) startExitMonitor(ctx context.Context, id string, pid uint32, exitCh <-chan containerd.ExitStatus) <-chan struct{} {
-	logrus := log.L.WithField("ns", em.c.name)
 	stopCh := make(chan struct{})
 	go func() {
 		defer close(stopCh)
@@ -146,12 +151,6 @@ func convertEvent(e *gogotypes.Any) (string, interface{}, error) {
 		id = e.Name
 	case *eventtypes.ImageDelete:
 		id = e.Name
-	case *eventtypes.NamespaceCreate:
-		id = e.Name
-	case *eventtypes.NamespaceUpdate:
-		id = e.Name
-	case *eventtypes.NamespaceDelete:
-		id = e.Name
 	default:
 		return "", nil, errors.New("unsupported event")
 	}
@@ -162,7 +161,6 @@ func convertEvent(e *gogotypes.Any) (string, interface{}, error) {
 // an error channel for the caller to wait for stop errors from the event monitor.
 // start must be called after subscribe.
 func (em *eventMonitor) start() <-chan error {
-	logrus := log.L.WithField("ns", em.c.name)
 	errCh := make(chan error)
 	if em.ch == nil || em.errCh == nil {
 		panic("event channel is nil")
@@ -186,8 +184,8 @@ func (em *eventMonitor) start() <-chan error {
 				}
 			case e := <-em.ch:
 				logrus.Debugf("Received containerd event timestamp - %v, namespace - %q, topic - %q", e.Timestamp, e.Namespace, e.Topic)
-				if e.Namespace != em.c.name {
-					logrus.Warnf("Ignoring events in namespace - %q", e.Namespace)
+				if e.Namespace != constants.K8sContainerdNamespace {
+					logrus.Debugf("Ignoring events in namespace - %q", e.Namespace)
 					break
 				}
 				id, evt, err := convertEvent(e.Event)
@@ -238,13 +236,13 @@ func (em *eventMonitor) stop() {
 
 // handleEvent handles a containerd event.
 func (em *eventMonitor) handleEvent(any interface{}) error {
-	ctx := ctrdutil.NamespacedContext(em.c.name)
+	ctx := ctrdutil.NamespacedContext()
 	ctx, cancel := context.WithTimeout(ctx, handleEventTimeout)
 	defer cancel()
 
 	switch e := any.(type) {
 	case *eventtypes.TaskExit:
-		log.G(ctx).Infof("TaskExit event %+v", e)
+		logrus.Infof("TaskExit event %+v", e)
 		// Use ID instead of ContainerID to rule out TaskExit event for exec.
 		cntr, err := em.c.containerStore.Get(e.ID)
 		if err == nil {
@@ -266,7 +264,7 @@ func (em *eventMonitor) handleEvent(any interface{}) error {
 		}
 		return nil
 	case *eventtypes.TaskOOM:
-		log.G(ctx).Infof("TaskOOM event %+v", e)
+		logrus.Infof("TaskOOM event %+v", e)
 		// For TaskOOM, we only care which container it belongs to.
 		cntr, err := em.c.containerStore.Get(e.ContainerID)
 		if err != nil {
@@ -283,16 +281,15 @@ func (em *eventMonitor) handleEvent(any interface{}) error {
 			return errors.Wrap(err, "failed to update container status for TaskOOM event")
 		}
 	case *eventtypes.ImageCreate:
-		log.G(ctx).Infof("ImageCreate event %+v", e)
+		logrus.Infof("ImageCreate event %+v", e)
 		return em.c.updateImage(ctx, e.Name)
 	case *eventtypes.ImageUpdate:
-		log.G(ctx).Infof("ImageUpdate event %+v", e)
+		logrus.Infof("ImageUpdate event %+v", e)
 		return em.c.updateImage(ctx, e.Name)
 	case *eventtypes.ImageDelete:
-		log.G(ctx).Infof("ImageDelete event %+v", e)
+		logrus.Infof("ImageDelete event %+v", e)
 		return em.c.updateImage(ctx, e.Name)
 	}
-	// TODO(dweomer): handle namespace lifecycle events
 
 	return nil
 }
@@ -336,12 +333,6 @@ func handleContainerExit(ctx context.Context, e *eventtypes.TaskExit, cntr conta
 		status.Pid = 0
 		status.FinishedAt = e.ExitedAt.UnixNano()
 		status.ExitCode = int32(e.ExitStatus)
-		// Unknown state can only transit to EXITED state, so we need
-		// to handle unknown state here.
-		if status.Unknown {
-			log.G(ctx).Debugf("Container %q transited from UNKNOWN to EXITED", cntr.ID)
-			status.Unknown = false
-		}
 		return status, nil
 	})
 	if err != nil {

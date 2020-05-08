@@ -17,15 +17,15 @@ import (
 	"github.com/containerd/containerd/log"
 	cns "github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/plugin"
-	"github.com/containerd/containerd/remotes"
-	"github.com/containerd/containerd/remotes/docker"
 	"github.com/containerd/containerd/services"
 	"github.com/containerd/containerd/snapshots"
+	criutil "github.com/containerd/cri/pkg/containerd/util"
 	"github.com/containerd/cri/pkg/server"
 	"github.com/pkg/errors"
 	"github.com/rancher/k3c/pkg/client"
 	"github.com/rancher/k3c/pkg/daemon/config"
 	"github.com/rancher/k3c/pkg/daemon/volume"
+	"github.com/rancher/k3c/pkg/defaults"
 	k3c "github.com/rancher/k3c/pkg/defaults"
 	"github.com/rancher/k3c/pkg/kicker"
 	"github.com/rancher/k3c/pkg/pushstatus"
@@ -42,9 +42,6 @@ type Daemon struct {
 	gck      kicker.Kicker
 	lock     sync.Mutex
 	pushJobs map[string]pushstatus.Tracker
-	tracker  docker.StatusTracker
-
-	getResolver func(context.Context, *client.AuthConfig) (remotes.Resolver, error)
 }
 
 func (c *Daemon) CreateVolume(ctx context.Context, name string) (*client.Volume, error) {
@@ -61,7 +58,7 @@ func (c *Daemon) RemoveVolume(ctx context.Context, name string, force bool) erro
 
 func (c *Daemon) start(ic *plugin.InitContext) error {
 	var (
-		ctx = cns.WithNamespace(ic.Context, k3c.DefaultNamespace)
+		ctx = criutil.WithUnlisted(cns.WithNamespace(ic.Context, defaults.PublicNamespace), defaults.PrivateNamespace)
 	)
 	plugins, err := ic.GetByType(plugin.GRPCPlugin)
 	if err != nil {
@@ -80,9 +77,6 @@ func (c *Daemon) start(ic *plugin.InitContext) error {
 	if !ok {
 		return errors.Errorf("unexpected instance type %T", criService)
 	}
-	c.getResolver = func(ctx context.Context, authConfig *client.AuthConfig) (remotes.Resolver, error) {
-		return svc.GetResolver(ctx, toAuth(authConfig), c.tracker)
-	}
 	c.crt = svc
 	c.img = svc
 	c.gck = kicker.New(ctx, true)
@@ -98,7 +92,7 @@ func (c *Daemon) start(ic *plugin.InitContext) error {
 
 func (c *Daemon) bootstrap(ic *plugin.InitContext) error {
 	var (
-		ctx = cns.WithNamespace(ic.Context, k3c.BootstrapNamespace)
+		ctx = cns.WithNamespace(ic.Context, k3c.PrivateNamespace)
 		cfg = ic.Config.(*config.K3Config)
 	)
 
@@ -112,18 +106,12 @@ func (c *Daemon) bootstrap(ic *plugin.InitContext) error {
 		return err
 	}
 
-	// mark namespace as managed
-	err = c.ctd.NamespaceService().SetLabel(ctx, k3c.DefaultNamespace, "io.cri-containerd", "managed")
-	if err != nil {
-		return err
-	}
-
 	if cfg.BootstrapImage == "" || cfg.BootstrapSkip {
 		log.G(ctx).Infof("K3C bootstrap skipped")
 		return nil
 	}
 
-	logrus := log.G(ctx).WithField("namespace", cfg.BootstrapNamespace).WithField("image", cfg.BootstrapImage)
+	logrus := log.G(ctx).WithField("namespace", defaults.PrivateNamespace).WithField("image", cfg.BootstrapImage)
 
 	image, err := c.ctd.GetImage(ctx, cfg.BootstrapImage)
 	if errdefs.IsNotFound(err) {

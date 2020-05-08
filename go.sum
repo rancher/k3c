@@ -203,8 +203,8 @@ github.com/dweomer/buildkit v0.6.2-0.20200111044149-7562b84375e4 h1:elGAKv3EqtjD
 github.com/dweomer/buildkit v0.6.2-0.20200111044149-7562b84375e4/go.mod h1:auJm/pdcHzciwG36is9O1A3kj+jJ3kc2wLdYIsBJj9g=
 github.com/dweomer/containerd v1.3.5-0.20200416225531-efdd59c500bf h1:2WbvYKDor5keKmBb3nOVr1YLIiufdPWyk3ul1N+y5iU=
 github.com/dweomer/containerd v1.3.5-0.20200416225531-efdd59c500bf/go.mod h1:2om0pJ92LKVun0Yn9IKZEGb/ebwvFSH5zKPt2YB7ILE=
-github.com/dweomer/cri v1.3.1-0.20200501231243-e8677cd6a496 h1:e3wNZkZXVumR1MHkBv5n5zVIB7ZNLw8Mz4AL/w3XGN4=
-github.com/dweomer/cri v1.3.1-0.20200501231243-e8677cd6a496/go.mod h1:itvTywBS8wRcflCqlgX7shxq5Sp9H81Gk+nelbUmUB8=
+github.com/dweomer/cri v1.11.1-0.20200508215717-5a3b30567ad1 h1:0xuYXC8rEnO56oOsriSomInG/FZ/tkV7lZnJQV1MTJo=
+github.com/dweomer/cri v1.11.1-0.20200508215717-5a3b30567ad1/go.mod h1:itvTywBS8wRcflCqlgX7shxq5Sp9H81Gk+nelbUmUB8=
 github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e h1:p1yVGRW3nmb85p1Sh1ZJSDm4A4iKLS5QNbvUHMgGu/M=
 github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
 github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=

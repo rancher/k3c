@@ -17,17 +17,15 @@ limitations under the License.
 package server
 
 import (
-	"io"
-
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/log"
+	cio "github.com/containerd/cri/pkg/server/io"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
+	"io"
 	"k8s.io/client-go/tools/remotecommand"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
-
-	cio "github.com/containerd/cri/pkg/server/io"
 )
 
 // Attach prepares a streaming endpoint to attach to a running container, and returns the address.
@@ -45,8 +43,6 @@ func (c *criService) Attach(ctx context.Context, r *runtime.AttachRequest) (*run
 
 func (c *criService) attachContainer(ctx context.Context, id string, stdin io.Reader, stdout, stderr io.WriteCloser,
 	tty bool, resize <-chan remotecommand.TerminalSize) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 	// Get container from our container store.
 	cntr, err := c.containerStore.Get(id)
 	if err != nil {
@@ -93,7 +89,7 @@ func (c *criService) attachContainer(ctx context.Context, id string, stdin io.Re
 	if err != nil {
 		return errors.Wrap(err, "failed to load task")
 	}
-	handleResizing(ctx, resize, func(size remotecommand.TerminalSize) {
+	handleResizing(resize, func(size remotecommand.TerminalSize) {
 		if err := task.Resize(ctx, uint32(size.Width), uint32(size.Height)); err != nil {
 			log.G(ctx).WithError(err).Errorf("Failed to resize task %q console", id)
 		}
