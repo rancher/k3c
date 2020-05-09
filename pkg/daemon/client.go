@@ -2,25 +2,32 @@ package daemon
 
 import (
 	"context"
+	"io"
 	"path/filepath"
 	"sync"
 
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/api/services/containers/v1"
-	"github.com/containerd/containerd/api/services/diff/v1"
-	"github.com/containerd/containerd/api/services/images/v1"
-	"github.com/containerd/containerd/api/services/namespaces/v1"
-	"github.com/containerd/containerd/api/services/tasks/v1"
+	eventspb "github.com/containerd/containerd/api/events"
+	containerspb "github.com/containerd/containerd/api/services/containers/v1"
+	diffpb "github.com/containerd/containerd/api/services/diff/v1"
+	imagespb "github.com/containerd/containerd/api/services/images/v1"
+	namespacespb "github.com/containerd/containerd/api/services/namespaces/v1"
+	taskspb "github.com/containerd/containerd/api/services/tasks/v1"
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
+	"github.com/containerd/containerd/events/exchange"
+	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/log"
-	cns "github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/plugin"
 	"github.com/containerd/containerd/services"
 	"github.com/containerd/containerd/snapshots"
 	criutil "github.com/containerd/cri/pkg/containerd/util"
 	"github.com/containerd/cri/pkg/server"
+	"github.com/containerd/typeurl"
+	prototypes "github.com/gogo/protobuf/types"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"github.com/rancher/k3c/pkg/client"
 	"github.com/rancher/k3c/pkg/daemon/config"
@@ -58,7 +65,7 @@ func (c *Daemon) RemoveVolume(ctx context.Context, name string, force bool) erro
 
 func (c *Daemon) start(ic *plugin.InitContext) error {
 	var (
-		ctx = criutil.WithUnlisted(cns.WithNamespace(ic.Context, defaults.PublicNamespace), defaults.PrivateNamespace)
+		ctx = criutil.WithUnlisted(namespaces.WithNamespace(ic.Context, defaults.PublicNamespace), defaults.PrivateNamespace)
 	)
 	plugins, err := ic.GetByType(plugin.GRPCPlugin)
 	if err != nil {
@@ -86,13 +93,14 @@ func (c *Daemon) start(ic *plugin.InitContext) error {
 	}
 
 	go c.gc(ctx)
+	go c.syncImages(namespaces.WithNamespace(ic.Context, defaults.PrivateNamespace), ic.Events)
 
 	return nil
 }
 
 func (c *Daemon) bootstrap(ic *plugin.InitContext) error {
 	var (
-		ctx = cns.WithNamespace(ic.Context, k3c.PrivateNamespace)
+		ctx = namespaces.WithNamespace(ic.Context, k3c.PrivateNamespace)
 		cfg = ic.Config.(*config.K3Config)
 	)
 
@@ -147,6 +155,96 @@ func (c *Daemon) Close() error {
 	return nil
 }
 
+// syncImages listens for ImageCreate events in the private namespace and copies them to the public namespace
+// based on the assumption that ImageCreate events are from images built by buildkit
+func (c *Daemon) syncImages(ctx context.Context, ex *exchange.Exchange) {
+	evtch, errch := ex.Subscribe(ctx, `topic~="/images/"`)
+	for {
+		select {
+		case err, ok := <-errch:
+			if !ok {
+				return
+			}
+			log.G(ctx).WithError(err).Error("image sync listener")
+		case evt, ok := <-evtch:
+			if !ok {
+				return
+			}
+			if evt.Namespace != defaults.PrivateNamespace {
+				continue
+			}
+			if err := c.handleEvent(ctx, evt.Event); err != nil {
+				log.G(ctx).WithError(err).Error("image sync handler")
+			}
+		case <-ctx.Done():
+			log.G(ctx).WithError(ctx.Err()).Error("image sync handler")
+			return
+		}
+	}
+}
+
+func (c *Daemon) handleEvent(ctx context.Context, any *prototypes.Any) error {
+	evt, err := typeurl.UnmarshalAny(any)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal any")
+	}
+
+	switch e := evt.(type) {
+	case *eventspb.ImageCreate:
+		log.G(ctx).WithField("event", "image.create").Debug(e.Name)
+		return c.handleImageCreate(ctx, e.Name)
+	}
+
+	return nil
+}
+
+func (c *Daemon) handleImageCreate(ctx context.Context, name string) error {
+	imageStore := c.ctd.ImageService()
+	img, err := imageStore.Get(ctx, name)
+	if err != nil {
+		return err
+	}
+	contentStore := c.ctd.ContentStore()
+	otherContext := namespaces.WithNamespace(ctx, defaults.PublicNamespace)
+	var copy images.HandlerFunc = func(ctx context.Context, desc ocispec.Descriptor) (subdescs []ocispec.Descriptor, err error) {
+		log.G(ctx).WithField("media-type", desc.MediaType).Debug(desc.Digest)
+		info, err := contentStore.Info(ctx, desc.Digest)
+		if err != nil {
+			return subdescs, err
+		}
+		if _, err = contentStore.Info(otherContext, desc.Digest); err != nil && !errdefs.IsNotFound(err) {
+			return subdescs, err
+		}
+		ra, err := contentStore.ReaderAt(ctx, desc)
+		if err != nil {
+			return subdescs, err
+		}
+		defer ra.Close()
+		r := content.NewReader(ra)
+		w, err := contentStore.Writer(otherContext, content.WithRef(img.Name))
+		if err != nil {
+			return subdescs, err
+		}
+		defer w.Close()
+		if _, err = io.Copy(w, r); err != nil {
+			return subdescs, err
+		}
+		if err = w.Commit(otherContext, 0, w.Digest(), content.WithLabels(info.Labels)); err != nil && errdefs.IsAlreadyExists(err) {
+			return subdescs, nil
+		}
+		return subdescs, err
+	}
+	err = images.Walk(ctx, images.Handlers(images.ChildrenHandler(contentStore), copy), img.Target)
+	if err != nil {
+		return err
+	}
+	_, err = imageStore.Create(otherContext, img)
+	if errdefs.IsAlreadyExists(err) {
+		return nil
+	}
+	return err
+}
+
 func getServicesOpts(ic *plugin.InitContext) ([]containerd.ServicesOpt, error) {
 	plugins, err := ic.GetByType(plugin.ServicePlugin)
 	if err != nil {
@@ -162,22 +260,22 @@ func getServicesOpts(ic *plugin.InitContext) ([]containerd.ServicesOpt, error) {
 			return containerd.WithContentStore(s.(content.Store))
 		},
 		services.ImagesService: func(s interface{}) containerd.ServicesOpt {
-			return containerd.WithImageService(s.(images.ImagesClient))
+			return containerd.WithImageService(s.(imagespb.ImagesClient))
 		},
 		services.SnapshotsService: func(s interface{}) containerd.ServicesOpt {
 			return containerd.WithSnapshotters(s.(map[string]snapshots.Snapshotter))
 		},
 		services.ContainersService: func(s interface{}) containerd.ServicesOpt {
-			return containerd.WithContainerService(s.(containers.ContainersClient))
+			return containerd.WithContainerService(s.(containerspb.ContainersClient))
 		},
 		services.TasksService: func(s interface{}) containerd.ServicesOpt {
-			return containerd.WithTaskService(s.(tasks.TasksClient))
+			return containerd.WithTaskService(s.(taskspb.TasksClient))
 		},
 		services.DiffService: func(s interface{}) containerd.ServicesOpt {
-			return containerd.WithDiffService(s.(diff.DiffClient))
+			return containerd.WithDiffService(s.(diffpb.DiffClient))
 		},
 		services.NamespacesService: func(s interface{}) containerd.ServicesOpt {
-			return containerd.WithNamespaceService(s.(namespaces.NamespacesClient))
+			return containerd.WithNamespaceService(s.(namespacespb.NamespacesClient))
 		},
 		services.LeasesService: func(s interface{}) containerd.ServicesOpt {
 			return containerd.WithLeasesService(s.(leases.Manager))
