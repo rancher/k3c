@@ -7,10 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/containerd/containerd/services/opt"
-
 	"github.com/containerd/containerd/cmd/containerd/command"
 	"github.com/containerd/containerd/plugin"
+	"github.com/containerd/containerd/services/opt"
 	"github.com/containerd/cri"
 	criconfig "github.com/containerd/cri/pkg/config"
 	"github.com/rancher/k3c/pkg/daemon"
