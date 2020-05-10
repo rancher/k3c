@@ -32,6 +32,15 @@ else
 	endif
 endif
 
+_GO_ENV := GOOS=$(GOOS) GOARCH=$(GOARCH)
+ifeq ($(GOARCH),arm)
+	ifndef GOARM
+		GOARM ?= 7
+	endif
+	_GO_ENV += GOARM=$(GOARM)
+endif
+GO := $(_GO_ENV) go
+
 ifndef GODEBUG
 	EXTRA_LDFLAGS += -s -w
 	DEBUG_GO_GCFLAGS :=
@@ -90,7 +99,7 @@ ci-shell: clean .dapper                  ## Launch a shell in the CI environment
 dapper-ci: .ci                           ## Used by Drone CI, does the same as "ci" but in a Drone way
 
 build:                                   ## Build using host go tools
-	go build ${DEBUG_GO_GCFLAGS} ${GO_GCFLAGS} ${GO_BUILDFLAGS} -o ${GOBIN}/${PROG} -ldflags "${GO_LDFLAGS}" ${GO_TAGS}
+	$(GO) build ${DEBUG_GO_GCFLAGS} ${GO_GCFLAGS} ${GO_BUILDFLAGS} -o ${GOBIN}/${PROG} -ldflags "${GO_LDFLAGS}" ${GO_TAGS}
 
 build-debug:                             ## Debug build using host go tools
 	$(MAKE) GODEBUG=y build
@@ -102,8 +111,8 @@ bin/golangci-lint:
 	curl -fsL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s ${GOLANGCI_VERSION}
 
 validate:                                ## Run go fmt/vet
-	go fmt ./...
-	go vet ./...
+	$(GO) fmt ./...
+	$(GO) vet ./...
 
 validate-ci: validate bin/golangci-lint  ## Run more validation for CI
 	[ "${GOARCH}" != "amd64" ] || ./bin/golangci-lint run
@@ -112,7 +121,7 @@ run: build-debug
 	./bin/${PROG} server
 
 bin/dlv:
-	go build -o bin/dlv github.com/go-delve/delve/cmd/dlv
+	$(GO) build -o bin/dlv github.com/go-delve/delve/cmd/dlv
 
 remote-debug: build-debug bin/dlv        ## Run with remote debugging listening on :2345
 	./bin/dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./bin/${PROG} server
