@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"context"
-	"io"
 	"path/filepath"
 	"sync"
 
@@ -193,6 +192,9 @@ func (c *Daemon) handleEvent(ctx context.Context, any *prototypes.Any) error {
 	case *eventspb.ImageCreate:
 		log.G(ctx).WithField("event", "image.create").Debug(e.Name)
 		return c.handleImageCreate(ctx, e.Name)
+	case *eventspb.ImageUpdate:
+		log.G(ctx).WithField("event", "image.update").Debug(e.Name)
+		return c.handleImageUpdate(ctx, e.Name)
 	}
 
 	return nil
@@ -205,44 +207,61 @@ func (c *Daemon) handleImageCreate(ctx context.Context, name string) error {
 		return err
 	}
 	contentStore := c.ctd.ContentStore()
-	otherContext := namespaces.WithNamespace(ctx, defaults.PublicNamespace)
-	var copy images.HandlerFunc = func(ctx context.Context, desc ocispec.Descriptor) (subdescs []ocispec.Descriptor, err error) {
-		log.G(ctx).WithField("media-type", desc.MediaType).Debug(desc.Digest)
-		info, err := contentStore.Info(ctx, desc.Digest)
+	k8x := namespaces.WithNamespace(ctx, defaults.PublicNamespace)
+	copy := images.Handlers(images.ChildrenHandler(contentStore), copyContent(k8x, contentStore, img))
+	if err = images.Walk(ctx, copy, img.Target); err != nil {
+		return err
+	}
+	if _, err = imageStore.Create(k8x, img); err != nil && !errdefs.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
+}
+
+func (c *Daemon) handleImageUpdate(ctx context.Context, name string) error {
+	imageStore := c.ctd.ImageService()
+	img, err := imageStore.Get(ctx, name)
+	if err != nil {
+		return err
+	}
+	contentStore := c.ctd.ContentStore()
+	k8x := namespaces.WithNamespace(ctx, defaults.PublicNamespace)
+	copy := images.Handlers(images.ChildrenHandler(contentStore), copyContent(k8x, contentStore, img))
+	if err = images.Walk(ctx, copy, img.Target); err != nil {
+		return err
+	}
+	if _, err = imageStore.Update(k8x, img); err != nil {
+		return err
+	}
+	return nil
+}
+
+func copyContent(k8x context.Context, contentStore content.Store, img images.Image) images.HandlerFunc {
+	return func(k3x context.Context, desc ocispec.Descriptor) (subdescs []ocispec.Descriptor, err error) {
+		log.G(k3x).WithField("media-type", desc.MediaType).Debug(desc.Digest)
+		info, err := contentStore.Info(k3x, desc.Digest)
 		if err != nil {
 			return subdescs, err
 		}
-		if _, err = contentStore.Info(otherContext, desc.Digest); err != nil && !errdefs.IsNotFound(err) {
+		if _, err = contentStore.Info(k8x, desc.Digest); err != nil && !errdefs.IsNotFound(err) {
 			return subdescs, err
 		}
-		ra, err := contentStore.ReaderAt(ctx, desc)
+		ra, err := contentStore.ReaderAt(k3x, desc)
 		if err != nil {
 			return subdescs, err
 		}
 		defer ra.Close()
-		r := content.NewReader(ra)
-		w, err := contentStore.Writer(otherContext, content.WithRef(img.Name))
+		w, err := contentStore.Writer(k8x, content.WithRef(img.Name))
 		if err != nil {
 			return subdescs, err
 		}
 		defer w.Close()
-		if _, err = io.Copy(w, r); err != nil {
-			return subdescs, err
-		}
-		if err = w.Commit(otherContext, 0, w.Digest(), content.WithLabels(info.Labels)); err != nil && errdefs.IsAlreadyExists(err) {
+		err = content.Copy(k8x, w, content.NewReader(ra), desc.Size, desc.Digest, content.WithLabels(info.Labels))
+		if err != nil && errdefs.IsAlreadyExists(err) {
 			return subdescs, nil
 		}
 		return subdescs, err
 	}
-	err = images.Walk(ctx, images.Handlers(images.ChildrenHandler(contentStore), copy), img.Target)
-	if err != nil {
-		return err
-	}
-	_, err = imageStore.Create(otherContext, img)
-	if errdefs.IsAlreadyExists(err) {
-		return nil
-	}
-	return err
 }
 
 func getServicesOpts(ic *plugin.InitContext) ([]containerd.ServicesOpt, error) {
