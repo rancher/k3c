@@ -12,8 +12,8 @@ import (
 )
 
 type Ps struct {
-	A_All   bool   `usage:"Show all images (default hides intermediate images)"`
-	Format  string `usage:"Pretty-print images using a Go template"`
+	A_All   bool   `usage:"Show all containers"`
+	Format  string `usage:"Pretty-print containers using a Go template"`
 	NoTrunc bool   `usage:"Don't truncate output"`
 	Q_Quiet bool   `usage:"Only show numeric IDs"`
 }
