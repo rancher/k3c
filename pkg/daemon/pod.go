@@ -13,6 +13,7 @@ import (
 	"time"
 
 	criutil "github.com/containerd/cri/pkg/containerd/util"
+	"github.com/containerd/cri/pkg/server"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/uuid"
@@ -299,9 +300,9 @@ func (c *Daemon) listPods(ctx context.Context, network bool) ([]v1.Pod, error) {
 	}
 
 	for _, pod := range pods {
-		podResult, err := toPod(pod)
+		podResult, err := c.toPod(ctx, pod)
 		if err != nil {
-			logrus.Errorf("failed to convert pod %s: %v", pod.ID, err)
+			logrus.Warnf("failed to convert pod %s: %v", pod.ID, err)
 			continue
 		}
 		ips := ips[pod.ID]
@@ -494,10 +495,21 @@ func toPhase(podData *podData) v1.PodPhase {
 	return v1.PodPending
 }
 
-func toPod(podData *podData) (v1.Pod, error) {
+func (c *Daemon) toPod(ctx context.Context, podData *podData) (v1.Pod, error) {
 	podConfig, err := getPodConfig(podData.sandbox)
 	if err != nil {
-		return v1.Pod{}, err
+		var (
+			req = &pb.PodSandboxStatusRequest{PodSandboxId: podData.ID, Verbose: true}
+			res *pb.PodSandboxStatusResponse
+		)
+		if res, err = c.crt.PodSandboxStatus(ctx, req); err != nil {
+			return v1.Pod{}, err
+		}
+		var info server.SandboxInfo
+		if err = json.Unmarshal([]byte(res.Info["info"]), &info); err != nil {
+			return v1.Pod{}, err
+		}
+		podConfig = info.Config
 	}
 
 	pod := v1.Pod{
@@ -570,7 +582,7 @@ func toPod(podData *podData) (v1.Pod, error) {
 			pm = nil
 		}
 
-		volumes, container, err := toContainer(pm, pod.Spec.Volumes, container)
+		volumes, container, err := c.toContainer(ctx, pm, pod.Spec.Volumes, container)
 		if err == nil {
 			pod.Spec.Containers = append(pod.Spec.Containers, container)
 			pod.Spec.Volumes = volumes

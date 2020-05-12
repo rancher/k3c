@@ -24,7 +24,7 @@ func NewPods(cli *cli.Context) table.Writer {
 	cols := [][]string{
 		{"CONTAINER ID", "Status.containerID | id"},
 		{"IMAGE", "Container.image | formatImage"},
-		{"COMMAND", "Info.runtimeSpec.process.args | join \" \""},
+		{"COMMAND", "Info.runtimeSpec.process.args | join \" \" | formatCommand"},
 		{"CREATED", "Typed.Pod.CreationTimestamp | ago"},
 		{"STATUS", "Typed.Status | containerStatus"},
 		{"PORTS", "Typed.Container.Ports | formatPorts"},
@@ -34,9 +34,19 @@ func NewPods(cli *cli.Context) table.Writer {
 	w := table.NewWriter(cols, config(cli, "CONTAINER ID"))
 	w.AddFormatFunc("formatPorts", formatPorts)
 	w.AddFormatFunc("formatImage", formatImage)
+	w.AddFormatFunc("formatCommand", formatCommandFunc(cli))
 	w.AddFormatFunc("ago", ago)
 	w.AddFormatFunc("containerStatus", containerStatus)
 	return w
+}
+
+func formatCommandFunc(cli *cli.Context) table.FormatFunc {
+	return func(command string) (string, error) {
+		if !cli.Bool("no-trunc") && len(command) > 40 {
+			return command[:37] + `...`, nil
+		}
+		return command, nil
+	}
 }
 
 func formatPorts(ports []v1.ContainerPort) (string, error) {

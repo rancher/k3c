@@ -3,6 +3,7 @@ package daemon
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,13 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containerd/containerd/namespaces"
 	criutil "github.com/containerd/cri/pkg/containerd/util"
-	"github.com/rancher/k3c/pkg/defaults"
-
+	"github.com/containerd/cri/pkg/server"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/pkg/errors"
 	"github.com/rancher/k3c/pkg/client"
 	"github.com/rancher/k3c/pkg/daemon/volume"
+	"github.com/rancher/k3c/pkg/defaults"
 	"github.com/rancher/k3c/pkg/log"
 	"github.com/rancher/k3c/pkg/remote/apis/k3c/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -76,6 +78,7 @@ func (c *Daemon) LogContainer(ctx context.Context, containerID string, opts *v1.
 		opts = &v1.PodLogOptions{}
 	}
 
+	ctx = criutil.WithUnlisted(namespaces.WithNamespace(ctx, defaults.PublicNamespace), defaults.PrivateNamespace)
 	_, _, containerID, err := c.GetContainer(ctx, containerID)
 	if err != nil {
 		return nil, err
@@ -483,10 +486,21 @@ func boolPointer(priv bool) *bool {
 	return nil
 }
 
-func toContainer(mappings []*pb.PortMapping, volumes []v1.Volume, data *containerData) ([]v1.Volume, v1.Container, error) {
+func (c *Daemon) toContainer(ctx context.Context, mappings []*pb.PortMapping, volumes []v1.Volume, data *containerData) ([]v1.Volume, v1.Container, error) {
 	containerConfig, _, err := getContainerConfig(data.container)
 	if err != nil {
-		return nil, v1.Container{}, err
+		var (
+			req = &pb.ContainerStatusRequest{ContainerId: data.container.Id, Verbose: true}
+			res *pb.ContainerStatusResponse
+		)
+		if res, err = c.crt.ContainerStatus(ctx, req); err != nil {
+			return nil, v1.Container{}, err
+		}
+		var info server.ContainerInfo
+		if err = json.Unmarshal([]byte(res.Info["info"]), &info); err != nil {
+			return nil, v1.Container{}, err
+		}
+		containerConfig = info.Config
 	}
 
 	var (
@@ -510,10 +524,9 @@ func toContainer(mappings []*pb.PortMapping, volumes []v1.Volume, data *containe
 		}
 		ports = append(ports, cp)
 	}
-
-	return volumes, v1.Container{
+	container := v1.Container{
 		Name:          data.container.Metadata.Name,
-		Image:         data.container.Image.Image,
+		Image:         data.status.Image.Image,
 		Command:       containerConfig.Command,
 		Args:          containerConfig.Args,
 		WorkingDir:    containerConfig.WorkingDir,
@@ -541,7 +554,8 @@ func toContainer(mappings []*pb.PortMapping, volumes []v1.Volume, data *containe
 		Stdin:     containerConfig.GetStdin(),
 		StdinOnce: containerConfig.GetStdinOnce(),
 		TTY:       containerConfig.GetTty(),
-	}, nil
+	}
+	return volumes, container, nil
 }
 
 func addMount(volumes []v1.Volume, mounts []v1.VolumeMount, mount *pb.Mount) ([]v1.Volume, []v1.VolumeMount) {
