@@ -6,6 +6,7 @@ import (
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/plugin"
+	"github.com/containerd/cri"
 	"github.com/moby/buildkit/cache/remotecache"
 	inlineremotecache "github.com/moby/buildkit/cache/remotecache/inline"
 	localremotecache "github.com/moby/buildkit/cache/remotecache/local"
@@ -20,6 +21,7 @@ import (
 	"github.com/moby/buildkit/solver/bboltcachestorage"
 	"github.com/moby/buildkit/worker"
 	"github.com/moby/buildkit/worker/base"
+	"github.com/pkg/errors"
 	"github.com/rancher/k3c/pkg/daemon/config"
 )
 
@@ -47,6 +49,8 @@ func PluginInitFunc(ic *plugin.InitContext) (interface{}, error) {
 	).Info("BuildKit init")
 	cfg := ic.Config.(*buildkit.Config)
 	cfg.Workers.Containerd.Address = ic.Address
+	cfg.Workers.Containerd.NetworkConfig.CNIBinaryPath = cri.Config.NetworkPluginBinDir
+	cfg.Workers.Containerd.NetworkConfig.CNIConfigPath = filepath.Join(cri.Config.NetworkPluginConfDir, "90-k3c.json")
 	cfg.Root = ic.Root
 	log.G(ic.Context).Debugf("BuildKit config %+v", *cfg)
 
@@ -56,6 +60,25 @@ func PluginInitFunc(ic *plugin.InitContext) (interface{}, error) {
 	// platforms
 	if len(ic.Meta.Platforms) == 0 {
 		ic.Meta.Platforms = append(ic.Meta.Platforms, platforms.DefaultSpec())
+	}
+
+	plugins, err := ic.GetByType(plugin.GRPCPlugin)
+	if err != nil {
+		return nil, err
+	}
+	k3cPlugin, ok := plugins["k3c"]
+	if !ok {
+		return nil, errors.New("failed to find k3c plugin")
+	}
+	var bridgeName, bridgeCIDR string
+	if bridgeName, ok = k3cPlugin.Meta.Exports["bridge-name"]; !ok {
+		bridgeName = config.DefaultBridgeName
+	}
+	if bridgeCIDR, ok = k3cPlugin.Meta.Exports["bridge-cidr"]; !ok {
+		bridgeCIDR = config.DefaultBridgeCIDR
+	}
+	if err := config.WriteFileJSON(cfg.Workers.Containerd.NetworkConfig.CNIConfigPath, config.DefaultCniConf(bridgeName, bridgeCIDR), 0600); err != nil {
+		return nil, err
 	}
 
 	controllerOpt := control.Opt{

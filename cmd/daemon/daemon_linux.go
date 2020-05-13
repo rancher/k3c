@@ -14,7 +14,6 @@ import (
 	criconfig "github.com/containerd/cri/pkg/config"
 	"github.com/rancher/k3c/pkg/daemon"
 	"github.com/rancher/k3c/pkg/daemon/config"
-	"github.com/rancher/k3c/pkg/daemon/services/buildkit"
 	"github.com/sirupsen/logrus"
 	cliv1 "github.com/urfave/cli"
 	cliv2 "github.com/urfave/cli/v2"
@@ -189,10 +188,6 @@ the backend to support the Docker work-alike frontend of k3c.`
 					Type: plugin.RuntimeRuncV2,
 				},
 			}
-			buildkit.Config.Workers.Containerd.NetworkConfig.Mode = "cni"
-			buildkit.Config.Workers.Containerd.NetworkConfig.CNIBinaryPath = cri.Config.NetworkPluginBinDir
-			buildkit.Config.Workers.Containerd.NetworkConfig.CNIConfigPath = filepath.Join(cri.Config.NetworkPluginConfDir, "90-k3c.json")
-
 			if err := os.MkdirAll(cri.Config.NetworkPluginBinDir, 0700); err != nil {
 				return err
 			}
@@ -209,9 +204,6 @@ the backend to support the Docker work-alike frontend of k3c.`
 				}
 			}
 			if err := os.MkdirAll(cri.Config.NetworkPluginConfDir, 0700); err != nil {
-				return err
-			}
-			if err := config.WriteFileJSON(buildkit.Config.Workers.Containerd.NetworkConfig.CNIConfigPath, config.DefaultCniConf(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {
 				return err
 			}
 			if err := config.WriteFileJSON(filepath.Join(cri.Config.NetworkPluginConfDir, "90-k3c.conflist"), config.DefaultCniConflist(daemon.Config.BridgeName, daemon.Config.BridgeCIDR), 0600); err != nil {

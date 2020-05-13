@@ -49,7 +49,6 @@ func newContainerdWorkerOpt(ic *plugin.InitContext) (base.WorkerOpt, error) {
 
 	client, err := containerd.New("",
 		containerd.WithDefaultNamespace(cfg.Workers.Containerd.Namespace),
-		containerd.WithDefaultRuntime(plugin.RuntimeLinuxV1),
 		containerd.WithServices(servicesOpts...),
 	)
 	if err != nil {
