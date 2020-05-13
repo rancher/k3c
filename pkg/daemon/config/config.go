@@ -9,8 +9,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/containerd/containerd/platforms"
-	"github.com/containerd/containerd/plugin"
-	cri "github.com/containerd/cri/pkg/config"
 	buildkit "github.com/moby/buildkit/cmd/buildkitd/config"
 	"github.com/rancher/k3c/pkg/defaults"
 )
@@ -31,13 +29,12 @@ var (
 )
 
 type K3Config struct {
-	BootstrapSkip  bool             `toml:"bootstrap_skip"`
-	BootstrapImage string           `toml:"bootstrap_image"`
-	BridgeName     string           `toml:"bridge_name"`
-	BridgeCIDR     string           `toml:"bridge_cidr"`
-	PodLogs        string           `toml:"pod_logs"`
-	Volumes        string           `toml:"volumes"`
-	CRI            cri.PluginConfig `toml:"cri"`
+	BootstrapSkip  bool   `toml:"bootstrap_skip"`
+	BootstrapImage string `toml:"bootstrap_image"`
+	BridgeName     string `toml:"bridge_name"`
+	BridgeCIDR     string `toml:"bridge_cidr"`
+	PodLogs        string `toml:"pod_logs"`
+	Volumes        string `toml:"volumes"`
 }
 
 func DefaultBuildkitConfig() *buildkit.Config {
@@ -61,16 +58,7 @@ func DefaultK3Config() *K3Config {
 		BootstrapImage: DefaultBootstrapImage,
 		PodLogs:        DefaultPodLogsDir,
 		Volumes:        DefaultVolumesDir,
-		CRI:            cri.DefaultConfig(),
 	}
-	config.CRI.SandboxImage = DefaultSandboxImage
-	config.CRI.DefaultRuntimeName = "runc"
-	config.CRI.Runtimes = map[string]cri.Runtime{
-		config.CRI.DefaultRuntimeName: {
-			Type: plugin.RuntimeRuncV2,
-		},
-	}
-	config.CRI.NetworkPluginMaxConfNum = 1
 	return config
 }
 

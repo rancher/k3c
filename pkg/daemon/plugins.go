@@ -43,7 +43,7 @@ func PluginInitFunc(ic *plugin.InitContext) (interface{}, error) {
 	log.G(ic.Context).Debugf("K3C config %+v", *cfg)
 
 	// exports
-	ic.Meta.Exports["K3CVersion"] = "v1alpha1"
+	ic.Meta.Exports["api-version"] = "v1alpha1"
 	ic.Meta.Exports["bridge-name"] = cfg.BridgeName
 	ic.Meta.Exports["bridge-cidr"] = cfg.BridgeCIDR
 	ic.Meta.Exports["pod-logs-dir"] = cfg.PodLogs
