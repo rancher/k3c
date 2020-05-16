@@ -73,7 +73,8 @@ endif
 GO_BUILDTAGS += ${DEBUG_TAGS}
 GO_TAGS=$(if $(GO_BUILDTAGS),-tags "$(GO_BUILDTAGS)",)
 
-GO_EXTLDFLAGS ?= -static
+GO_BUILDFLAGS ?= -buildmode=pie
+GO_EXTLDFLAGS ?= -fno-PIC -static
 GO_LDFLAGS ?= $(EXTRA_LDFLAGS)
 GO_LDFLAGS += -X ${PKG}/pkg/version.Version=$(VERSION)
 GO_LDFLAGS += -X ${PKG}/pkg/version.GitCommit=$(REVISION)
