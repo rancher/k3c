@@ -20,7 +20,7 @@ import (
 	"k8s.io/klog"
 )
 
-func Command() *cliv2.Command {
+func newApp() *cliv1.App {
 	app := command.App()
 	app.Name = "k3c daemon"
 	app.Usage = "containerd++ (cri, buildkit and k3c)"
@@ -145,7 +145,8 @@ the backend to support the Docker work-alike frontend of k3c.`
 			Destination: &cri.Config.SandboxImage,
 		},
 	}...)
-	app.Before = func(before cliv1.BeforeFunc) cliv1.BeforeFunc {
+
+	app.Action = func(action interface{}) cliv1.ActionFunc {
 		return func(clx *cliv1.Context) error {
 			// setup env
 			for i := range clx.App.Flags {
@@ -212,13 +213,15 @@ the backend to support the Docker work-alike frontend of k3c.`
 			if err := os.Setenv("PATH", fmt.Sprintf("%s%c%s", os.Getenv("PATH"), os.PathListSeparator, filepath.Join(root, "bin", "aux"))); err != nil {
 				return err
 			}
-			if before != nil {
-				return before(clx)
-			}
-			return nil
+			return cliv1.HandleAction(action, clx)
 		}
-	}(app.Before)
+	}(app.Action)
 
+	return app
+}
+
+func Command() *cliv2.Command {
+	app := newApp()
 	return &cliv2.Command{
 		Name:            "daemon",
 		Usage:           "Run the container daemon",
