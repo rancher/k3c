@@ -68,13 +68,13 @@ endif
 ifdef BUILDTAGS
     GO_BUILDTAGS = ${BUILDTAGS}
 else
-	GO_BUILDTAGS = apparmor seccomp selinux netgo osusergo static_build no_btrfs
+	GO_BUILDTAGS = apparmor seccomp selinux netcgo osusergo static_build no_btrfs
 endif
 GO_BUILDTAGS += ${DEBUG_TAGS}
 GO_TAGS=$(if $(GO_BUILDTAGS),-tags "$(GO_BUILDTAGS)",)
 
 GO_BUILDFLAGS ?= -buildmode=pie
-GO_EXTLDFLAGS ?= -fno-PIC -static
+GO_EXTLDFLAGS ?= -static
 GO_LDFLAGS ?= $(EXTRA_LDFLAGS)
 GO_LDFLAGS += -X ${PKG}/pkg/version.Version=$(VERSION)
 GO_LDFLAGS += -X ${PKG}/pkg/version.GitCommit=$(REVISION)

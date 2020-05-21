@@ -90,8 +90,8 @@ ARG GOPATH=/go
 ARG CONTAINERD_VERSION="v1.3.4+k3c.1"
 ARG CONTAINERD_PACKAGE=github.com/dweomer/containerd
 ARG CONTAINERD_BUILDTAGS="apparmor seccomp selinux netgo osusergo static_build no_btrfs"
-ARG CONTAINERD_EXTRA_FLAGS="-buildmode pie"
-ARG CONTAINERD_EXTRA_LDFLAGS='-w -s -extldflags "-fno-PIC -static"'
+ARG CONTAINERD_EXTRA_FLAGS="-buildmode=pie"
+ARG CONTAINERD_EXTRA_LDFLAGS='-w -s -extldflags "-fpic -static"'
 RUN git clone -b "${CONTAINERD_VERSION}" "https://${CONTAINERD_PACKAGE}.git" ${GOPATH}/src/github.com/containerd/containerd
 WORKDIR ${GOPATH}/src/github.com/containerd/containerd
 ENV GO111MODULE=off
