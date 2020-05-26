@@ -49,8 +49,29 @@ func PluginInitFunc(ic *plugin.InitContext) (interface{}, error) {
 	).Info("BuildKit init")
 	cfg := ic.Config.(*buildkit.Config)
 	cfg.Workers.Containerd.Address = ic.Address
-	cfg.Workers.Containerd.NetworkConfig.CNIBinaryPath = cri.Config.NetworkPluginBinDir
-	cfg.Workers.Containerd.NetworkConfig.CNIConfigPath = filepath.Join(cri.Config.NetworkPluginConfDir, "90-k3c.json")
+	if cfg.Workers.Containerd.NetworkConfig.Mode == "cni" {
+		cfg.Workers.Containerd.NetworkConfig.CNIBinaryPath = cri.Config.NetworkPluginBinDir
+		cfg.Workers.Containerd.NetworkConfig.CNIConfigPath = filepath.Join(cri.Config.NetworkPluginConfDir, "90-k3c.json")
+
+		plugins, err := ic.GetByType(plugin.GRPCPlugin)
+		if err != nil {
+			return nil, err
+		}
+		k3cPlugin, ok := plugins["k3c"]
+		if !ok {
+			return nil, errors.New("failed to find k3c plugin")
+		}
+		var bridgeName, bridgeCIDR string
+		if bridgeName, ok = k3cPlugin.Meta.Exports["bridge-name"]; !ok {
+			bridgeName = config.DefaultBridgeName
+		}
+		if bridgeCIDR, ok = k3cPlugin.Meta.Exports["bridge-cidr"]; !ok {
+			bridgeCIDR = config.DefaultBridgeCIDR
+		}
+		if err := config.WriteFileJSON(cfg.Workers.Containerd.NetworkConfig.CNIConfigPath, config.DefaultCniConf(bridgeName, bridgeCIDR), 0600); err != nil {
+			return nil, err
+		}
+	}
 	cfg.Root = ic.Root
 	log.G(ic.Context).Debugf("BuildKit config %+v", *cfg)
 
@@ -60,25 +81,6 @@ func PluginInitFunc(ic *plugin.InitContext) (interface{}, error) {
 	// platforms
 	if len(ic.Meta.Platforms) == 0 {
 		ic.Meta.Platforms = append(ic.Meta.Platforms, platforms.DefaultSpec())
-	}
-
-	plugins, err := ic.GetByType(plugin.GRPCPlugin)
-	if err != nil {
-		return nil, err
-	}
-	k3cPlugin, ok := plugins["k3c"]
-	if !ok {
-		return nil, errors.New("failed to find k3c plugin")
-	}
-	var bridgeName, bridgeCIDR string
-	if bridgeName, ok = k3cPlugin.Meta.Exports["bridge-name"]; !ok {
-		bridgeName = config.DefaultBridgeName
-	}
-	if bridgeCIDR, ok = k3cPlugin.Meta.Exports["bridge-cidr"]; !ok {
-		bridgeCIDR = config.DefaultBridgeCIDR
-	}
-	if err := config.WriteFileJSON(cfg.Workers.Containerd.NetworkConfig.CNIConfigPath, config.DefaultCniConf(bridgeName, bridgeCIDR), 0600); err != nil {
-		return nil, err
 	}
 
 	controllerOpt := control.Opt{
