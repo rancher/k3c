@@ -47,7 +47,7 @@ func DefaultBuildkitConfig() *buildkit.Config {
 		},
 		Namespace: defaults.PrivateNamespace,
 	}
-	config.Workers.Containerd.NetworkConfig.Mode = "cni"
+	config.Workers.Containerd.NetworkConfig.Mode = "host"
 	return &config
 }
 

@@ -73,14 +73,17 @@ func newContainerdWorkerOpt(ic *plugin.InitContext) (base.WorkerOpt, error) {
 	}
 
 	cniRoot := filepath.Clean(filepath.Join(cfg.Root, ".."))
-	networkProviders, err := netproviders.Providers(netproviders.Opt{
+	networkProvidersOpt := netproviders.Opt{
 		Mode: cfg.Workers.Containerd.NetworkConfig.Mode,
-		CNI: cniprovider.Opt{
+	}
+	if networkProvidersOpt.Mode == "cni" {
+		networkProvidersOpt.CNI = cniprovider.Opt{
 			Root:       cniRoot,
 			ConfigPath: cfg.Workers.Containerd.NetworkConfig.CNIConfigPath,
 			BinaryDir:  cfg.Workers.Containerd.NetworkConfig.CNIBinaryPath,
-		},
-	})
+		}
+	}
+	networkProviders, err := netproviders.Providers(networkProvidersOpt)
 	if err != nil {
 		return base.WorkerOpt{}, err
 	}
