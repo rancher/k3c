@@ -39,6 +39,7 @@ the backend to support the Docker work-alike frontend of k3c.`
 			if sf, ok := flag.(cliv1.StringFlag); ok {
 				sf.Value = filepath.Join(config.DefaultDaemonStateDir, "k3c.sock")
 				sf.EnvVar = "K3C_ADDRESS"
+				sf.Destination = &config.Socket.Address
 				app.Flags[i] = sf
 			} else {
 				logrus.Warnf("unexpected type for flag %q = %#v", flag.GetName(), flag)
@@ -144,6 +145,18 @@ the backend to support the Docker work-alike frontend of k3c.`
 			Usage:       "containerd-style image ref for sandboxes",
 			Destination: &cri.Config.SandboxImage,
 		},
+		cliv1.IntFlag{
+			Name:        "socket-gid,group",
+			EnvVar:      "K3C_SOCKET_GID",
+			Usage:       "gRPC socket gid",
+			Destination: &config.Socket.GID,
+		},
+		cliv1.IntFlag{
+			Name:        "socket-uid",
+			EnvVar:      "K3C_SOCKET_UID",
+			Usage:       "gRPC socket uid",
+			Destination: &config.Socket.UID,
+		},
 	}...)
 
 	app.Action = func(action interface{}) cliv1.ActionFunc {
@@ -161,6 +174,8 @@ the backend to support the Docker work-alike frontend of k3c.`
 				case cliv1.BoolTFlag:
 					e = t.EnvVar
 				case cliv1.StringFlag:
+					e = t.EnvVar
+				case cliv1.IntFlag:
 					e = t.EnvVar
 				}
 				if e != "" {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/containerd/services/server/config"
 	buildkit "github.com/moby/buildkit/cmd/buildkitd/config"
 	"github.com/rancher/k3c/pkg/defaults"
 )
@@ -26,6 +27,10 @@ var (
 	DefaultSandboxImage = defaults.DefaultSandboxImage
 	DefaultPodLogsDir   = defaults.DefaultPodLogsDir
 	DefaultVolumesDir   = filepath.Join(DefaultDaemonRootDir, "volumes")
+)
+
+var (
+	Socket config.GRPCConfig
 )
 
 type K3Config struct {
