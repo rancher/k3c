@@ -1,6 +1,9 @@
 package daemon
 
 import (
+	"os"
+	"time"
+
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/plugin"
@@ -68,5 +71,30 @@ func PluginInitFunc(ic *plugin.InitContext) (interface{}, error) {
 	service := server.NewContainerService(daemon)
 	service.SetInitialized(true)
 	log.G(ic.Context).WithField("bridge", cfg.BridgeName).WithField("cidr", cfg.BridgeCIDR).Info("K3C daemon")
+	go func() {
+		var (
+			addr = config.Socket.Address
+			gid  = config.Socket.GID
+			uid  = config.Socket.UID
+		)
+		for {
+			select {
+			case <-time.After(100 * time.Millisecond):
+				err := os.Chown(addr, uid, gid)
+				if os.IsNotExist(err) {
+					continue
+				}
+				log := log.G(ic.Context).WithField("address", addr).WithField("gid", gid).WithField("uid", uid)
+				if err != nil {
+					log.WithError(err).Warn("K3C socket")
+				} else {
+					log.Debug("K3C socket")
+				}
+				return
+			case <-ic.Context.Done():
+				return
+			}
+		}
+	}()
 	return service, nil
 }
