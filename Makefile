@@ -68,7 +68,7 @@ endif
 ifdef BUILDTAGS
     GO_BUILDTAGS = ${BUILDTAGS}
 else
-	GO_BUILDTAGS = apparmor seccomp selinux netcgo osusergo static_build no_btrfs
+	GO_BUILDTAGS = apparmor seccomp selinux netgo osusergo static_build no_btrfs
 endif
 GO_BUILDTAGS += ${DEBUG_TAGS}
 GO_TAGS=$(if $(GO_BUILDTAGS),-tags "$(GO_BUILDTAGS)",)
