@@ -192,12 +192,12 @@ func (a *InstallBuilder) DaemonSet(_ context.Context, k *client.Interface) error
 					DNSPolicy: corev1.DNSClusterFirstWithHostNet,
 					Containers: []corev1.Container{{
 						Name:  "buildkit",
-						Image: "moby/buildkit:v0.8.1",
+						Image: a.GetBuildkitImage(),
 						Args: []string{
-							fmt.Sprintf("--addr=%s", a.BuildkitAddress),
+							fmt.Sprintf("--addr=%s", a.BuildkitSocket),
 							fmt.Sprintf("--addr=tcp://0.0.0.0:%d", a.BuildkitPort),
 							"--containerd-worker=true",
-							fmt.Sprintf("--containerd-worker-addr=%s", a.ContainerdAddress),
+							fmt.Sprintf("--containerd-worker-addr=%s", a.ContainerdSocket),
 							"--containerd-worker-gc",
 							"--oci-worker=false",
 						},
@@ -222,9 +222,9 @@ func (a *InstallBuilder) DaemonSet(_ context.Context, k *client.Interface) error
 						Command: []string{"k3c", "--debug", "agent"},
 						Args: []string{
 							fmt.Sprintf("--agent-port=%d", a.AgentPort),
-							fmt.Sprintf("--buildkit-address=%s", a.BuildkitAddress),
+							fmt.Sprintf("--buildkit-socket=%s", a.BuildkitSocket),
 							fmt.Sprintf("--buildkit-port=%d", a.BuildkitPort),
-							fmt.Sprintf("--containerd-address=%s", a.ContainerdAddress),
+							fmt.Sprintf("--containerd-socket=%s", a.ContainerdSocket),
 						},
 						Ports: []corev1.ContainerPort{
 							a.containerPort("k3c"),
