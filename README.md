@@ -49,6 +49,9 @@ because the `containerd` client code assumes a certain level of co-locality with
 # cd ~/Projects/rancher/k3c
 go generate # only necessary when modifying the gRPC protobuf IDL, see Dockerfile for pre-reqs
 go build -ldflags '-w -extldflags=-static' -tags="seccomp,selinux,static_build,netgo,osusergo" .
+# only needed until @dweomer gets the automated builds publishing again
+docker build --tag your/image:tag .
+docker push your/image:tag
 ```
 
 ## Running
@@ -57,12 +60,12 @@ Have a working `k3s` installation with a working `$HOME/.kube/config` or `$KUBEC
 
 ```bash
 # Installation on a single-node cluster
-./k3c install
+./k3c install --agent-image=docker.io/your/image:tag
 ```
 
 ```bash
 # Installation on a multi-node cluster, targeting a Node named "my-builder-node"
-./k3c install --selector k3s.io/hostname=my-builder-node 
+./k3c install --agent-image=docker.io/your/image:tag --selector k3s.io/hostname=my-builder-node
 
 ```
 
