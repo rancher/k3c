@@ -1,0 +1,145 @@
+syntax = 'proto3';
+
+package k3c.services.images.v1alpha1;
+option go_package = "pkg/apis/services/images/v1alpha1;images";
+
+import "google/protobuf/timestamp.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "k8s.io/cri-api/pkg/apis/runtime/v1alpha2/api.proto";
+//import "github.com/moby/buildkit/solver/pb/ops.proto";
+//import "github.com/moby/buildkit/api/services/control/control.proto";
+
+option (gogoproto.goproto_stringer_all) = false;
+option (gogoproto.stringer_all) =  true;
+option (gogoproto.goproto_getters_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_unrecognized_all) = false;
+
+service Images {
+//    // Build an image
+//    rpc Build (ImageBuildRequest) returns (ImageBuildResponse);
+
+//    // BuildStatus
+//    rpc BuildStatus (ImageBuildStatusRequest) returns (stream ImageBuildStatusResponse);
+
+    // Status of an image
+    rpc Status (ImageStatusRequest) returns (ImageStatusResponse);
+
+    // List images
+    rpc List (ImageListRequest) returns (ImageListResponse);
+
+    // Pull an image
+    rpc Pull (ImagePullRequest) returns (ImagePullResponse);
+    rpc PullProgress (ImageProgressRequest) returns (stream ImageProgressResponse);
+
+    // Push an image
+    rpc Push (ImagePushRequest) returns (ImagePushResponse);
+    rpc PushProgress (ImageProgressRequest) returns (stream ImageProgressResponse);
+
+    // Remove an image
+    rpc Remove (ImageRemoveRequest) returns (ImageRemoveResponse);
+
+    // Tag an image
+    rpc Tag(ImageTagRequest) returns (ImageTagResponse);
+}
+
+//message ImageBuildRequest {
+//    string Ref = 1;
+//    pb.Definition Definition = 2;
+//    string Exporter = 3;
+//    map<string, string> ExporterAttrs = 4;
+//    string Session = 5;
+//    string Frontend = 6;
+//    map<string, string> FrontendAttrs = 7;
+//    moby.buildkit.v1.CacheOptions Cache = 8 [(gogoproto.nullable) = false];
+//    repeated string Entitlements = 9 [(gogoproto.customtype) = "github.com/moby/buildkit/util/entitlements.Entitlement" ];
+//    map<string, pb.Definition> FrontendInputs = 10;
+//}
+
+//message ImageBuildResponse {
+//    map<string, string> ExporterResponse = 1;
+//}
+
+//message ImageBuildStatusRequest {
+//    string Ref = 1;
+//}
+
+//message ImageBuildStatusResponse {
+//    repeated moby.buildkit.v1.Vertex vertexes = 1;
+//    repeated moby.buildkit.v1.VertexStatus statuses = 2;
+//    repeated moby.buildkit.v1.VertexLog logs = 3;
+//}
+
+message ImageListRequest {
+    // Filter to list images.
+    runtime.v1alpha2.ImageFilter filter = 1;
+}
+
+message ImageListResponse {
+    // List of images.
+    repeated runtime.v1alpha2.Image images = 1;
+}
+
+message ImagePullRequest {
+    runtime.v1alpha2.ImageSpec image = 1;
+    runtime.v1alpha2.AuthConfig auth = 2;
+}
+message ImagePullResponse {
+    string image = 1;
+}
+
+message ImagePushRequest {
+    runtime.v1alpha2.ImageSpec image = 1;
+    runtime.v1alpha2.AuthConfig auth = 2;
+}
+message ImagePushResponse {
+    string image = 1;
+}
+
+message ImageProgressRequest {
+    string image = 1;
+}
+message ImageProgressResponse {
+    repeated ImageStatus status = 1 [(gogoproto.nullable) = false];
+}
+
+// lifted from github.com/containerd/containerd/api/services/content/v1/content.proto
+message ImageStatus {
+    string ref = 1;
+    string status = 2;
+    int64 offset = 3;
+    int64 total = 4;
+    google.protobuf.Timestamp started_at = 5 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+    google.protobuf.Timestamp updated_at = 6 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+}
+
+message ImageRemoveRequest {
+    // Spec of the image to remove.
+    runtime.v1alpha2.ImageSpec image = 1;
+}
+
+message ImageRemoveResponse {
+}
+
+message ImageStatusRequest {
+    // Spec of the image.
+    runtime.v1alpha2.ImageSpec image = 1;
+}
+
+message ImageStatusResponse {
+    // Status of the image.
+    runtime.v1alpha2.Image image = 1;
+}
+
+message ImageTagRequest {
+    // Spec of the image to remove.
+    runtime.v1alpha2.ImageSpec image = 1;
+    repeated string tags = 2;
+}
+
+message ImageTagResponse {
+    // Status of the image.
+    runtime.v1alpha2.Image image = 1;
+}
