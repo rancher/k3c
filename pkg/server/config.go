@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	defaultAgentPort  = 1233
-	defaultAgentImage = "docker.io/rancher/k3c"
+	defaultAgentPort     = 1233
+	defaultAgentImage    = "docker.io/rancher/k3c"
+	defaultBuildkitImage = "docker.io/moby/buildkit:v0.8.1"
 
 //	defaultBuildkitPort      = 1234
 //	defaultBuildkitAddress   = "unix:///run/buildkit/buildkitd.sock"
@@ -24,8 +25,9 @@ const (
 )
 
 var (
-	DefaultAgentPort  = defaultAgentPort
-	DefaultAgentImage = defaultAgentImage
+	DefaultAgentPort     = defaultAgentPort
+	DefaultAgentImage    = defaultAgentImage
+	DefaultBuildkitImage = defaultBuildkitImage
 
 //	DefaultBuildkitPort      = defaultBuildkitPort
 //	DefaultBuildkitAddress   = defaultBuildkitAddress
@@ -37,18 +39,29 @@ var (
 type Config struct {
 	AgentImage        string `usage:"Image to run the agent w/ missing tag inferred from version" default:"docker.io/rancher/k3c"`
 	AgentPort         int    `usage:"Port that the agent will listen on" default:"1233"`
-	BuildkitPort      int    `usage:"BuildKit service port" default:"1234"`
-	BuildkitAddress   string `usage:"BuildKit socket address" default:"unix:///run/buildkit/buildkitd.sock"`
+	BuildkitImage     string `usage:"BuildKit image for running buildkitd" default:"docker.io/moby/buildkit:v0.8.1"`
 	BuildkitNamespace string `usage:"BuildKit namespace in containerd (not 'k8s.io')" default:"buildkit"`
-	ContainerdAddress string `usage:"Containerd socket address" default:"/run/k3s/containerd/containerd.sock"`
+	BuildkitPort      int    `usage:"BuildKit service port" default:"1234"`
+	BuildkitSocket    string `usage:"BuildKit socket address" default:"unix:///run/buildkit/buildkitd.sock"`
+	ContainerdSocket  string `usage:"Containerd socket address" default:"/run/k3s/containerd/containerd.sock"`
 }
 
 func (c *Config) GetAgentImage() string {
+	if c.AgentImage == "" {
+		c.AgentImage = DefaultAgentImage
+	}
 	// TODO assumes default agent image is tag-less
 	if c.AgentImage == DefaultAgentImage {
 		return fmt.Sprintf("%s:%s", c.AgentImage, version.Version)
 	}
 	return c.AgentImage
+}
+
+func (c *Config) GetBuildkitImage() string {
+	if c.BuildkitImage == "" {
+		c.BuildkitImage = DefaultBuildkitImage
+	}
+	return c.BuildkitImage
 }
 
 func (c *Config) Interface(ctx context.Context, config *client.Config) (*Interface, error) {
@@ -60,11 +73,11 @@ func (c *Config) Interface(ctx context.Context, config *client.Config) (*Interfa
 		Kubernetes: k8s,
 	}
 
-	server.Buildkit, err = buildkit.New(ctx, c.BuildkitAddress)
+	server.Buildkit, err = buildkit.New(ctx, c.BuildkitSocket)
 	if err != nil {
 		return nil, err
 	}
-	conn, err := grpc.DialContext(ctx, fmt.Sprintf("unix://%s", c.ContainerdAddress), grpc.WithInsecure(), grpc.WithBlock(), grpc.FailOnNonTempDialError(true))
+	conn, err := grpc.DialContext(ctx, fmt.Sprintf("unix://%s", c.ContainerdSocket), grpc.WithInsecure(), grpc.WithBlock(), grpc.FailOnNonTempDialError(true))
 	if err != nil {
 		server.Close()
 		return nil, err
