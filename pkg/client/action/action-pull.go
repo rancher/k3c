@@ -15,7 +15,6 @@ import (
 )
 
 type PullImage struct {
-	Force    bool   `usage:""`
 	Platform string `usage:"Set platform if server is multi-platform capable"`
 }
 
