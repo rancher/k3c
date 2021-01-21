@@ -3,7 +3,7 @@ k3c - Classic Docker (Build) for a Kubernetes world
 
 ***STATUS: EXPERIMENT - Let us know what you think***
 
-***NOTE: the original experiment started on `master` while the next-gen work will be on `trunk`***
+***NOTE: the original experiment started on `master` while the next-gen work will be on `main`***
 
 `k3c` brings the Classic &trade; Docker images manipulation UX to your
 `k3s` development workflow. It is designed to enable the rapid feedback
