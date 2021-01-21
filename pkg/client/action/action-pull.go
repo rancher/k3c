@@ -21,11 +21,13 @@ type PullImage struct {
 
 func (s *PullImage) Invoke(ctx context.Context, k8s *client.Interface, image string) error {
 	return DoImages(ctx, k8s, func(ctx context.Context, imagesClient imagesv1.ImagesClient) error {
-		eg, ctx := errgroup.WithContext(ctx)
 		ch := make(chan []imagesv1.ImageStatus)
+		eg, ctx := errgroup.WithContext(ctx)
+		// render output from the channel
 		eg.Go(func() error {
 			return progress.Display(ch, os.Stdout)
 		})
+		// render progress to the channel
 		eg.Go(func() error {
 			defer close(ch)
 			ppc, err := imagesClient.PullProgress(ctx, &imagesv1.ImageProgressRequest{Image: image})
@@ -44,27 +46,28 @@ func (s *PullImage) Invoke(ctx context.Context, k8s *client.Interface, image str
 			}
 			return nil
 		})
-		req := &imagesv1.ImagePullRequest{
-			Image: &criv1.ImageSpec{
-				Image: image,
-			},
-		}
-		provider := credentialprovider.NewDockerKeyring()
-		if auth, ok := provider.Lookup(image); ok {
-			req.Auth = &criv1.AuthConfig{
-				Username:      auth[0].Username,
-				Password:      auth[0].Password,
-				Auth:          auth[0].Auth,
-				ServerAddress: auth[0].ServerAddress,
-				IdentityToken: auth[0].IdentityToken,
-				RegistryToken: auth[0].RegistryToken,
+		// initiate the pull
+		eg.Go(func() error {
+			req := &imagesv1.ImagePullRequest{
+				Image: &criv1.ImageSpec{
+					Image: image,
+				},
 			}
-		}
-		res, err := imagesClient.Pull(ctx, req)
-		if err != nil {
+			keyring := credentialprovider.NewDockerKeyring()
+			if auth, ok := keyring.Lookup(image); ok {
+				req.Auth = &criv1.AuthConfig{
+					Username:      auth[0].Username,
+					Password:      auth[0].Password,
+					Auth:          auth[0].Auth,
+					ServerAddress: auth[0].ServerAddress,
+					IdentityToken: auth[0].IdentityToken,
+					RegistryToken: auth[0].RegistryToken,
+				}
+			}
+			res, err := imagesClient.Pull(ctx, req)
+			logrus.Debugf("image-pull: %v", res)
 			return err
-		}
-		logrus.Debugf("%#v", res)
+		})
 		return eg.Wait()
 	})
 }
