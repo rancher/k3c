@@ -12,9 +12,9 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
-	"github.com/containerd/cri/pkg/server"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	imagesv1 "github.com/rancher/k3c/pkg/apis/services/images/v1alpha1"
+	"github.com/rancher/k3c/pkg/auth"
 	"github.com/rancher/k3c/pkg/progress"
 	"github.com/rancher/k3c/pkg/version"
 	"github.com/sirupsen/logrus"
@@ -31,7 +31,7 @@ func (i *Interface) Push(ctx context.Context, request *imagesv1.ImagePushRequest
 	authorizer := docker.NewDockerAuthorizer(
 		docker.WithAuthClient(http.DefaultClient),
 		docker.WithAuthCreds(func(host string) (string, string, error) {
-			return server.ParseAuth(request.Auth, host)
+			return auth.Parse(request.Auth, host)
 		}),
 		docker.WithAuthHeader(http.Header{
 			"User-Agent": []string{fmt.Sprintf("k3c/%s", version.Version)},
