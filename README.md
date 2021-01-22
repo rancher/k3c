@@ -57,12 +57,12 @@ Have a working `k3s` installation with a working `$HOME/.kube/config` or `$KUBEC
 
 ```bash
 # Installation on a single-node cluster
-./k3c install --agent-image=docker.io/${ORG}/k3c
+./bin/k3c install --agent-image=docker.io/${ORG}/k3c
 ```
 
 ```bash
 # Installation on a multi-node cluster, targeting a Node named "my-builder-node"
-./k3c install --agent-image=docker.io/${ORG}/k3c --selector k3s.io/hostname=my-builder-node
+./bin/k3c install --agent-image=docker.io/${ORG}/k3c --selector k3s.io/hostname=my-builder-node
 
 ```
 
@@ -72,7 +72,7 @@ installing on multi-node clusters. Upon successful installation this node will a
 Build images like you would with `docker`
 
 ```
-$ ./k3c --help
+$ ./bin/k3c --help
 Usage:
   k3c [flags]
   k3c [command]
