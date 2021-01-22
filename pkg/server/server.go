@@ -1,6 +1,8 @@
 package server
 
 import (
+	"sync"
+
 	"github.com/containerd/containerd"
 	buildkit "github.com/moby/buildkit/client"
 	imagesv1 "github.com/rancher/k3c/pkg/apis/services/images/v1alpha1"
@@ -17,6 +19,7 @@ type Interface struct {
 	Containerd     *containerd.Client
 	RuntimeService criv1.RuntimeServiceClient
 	ImageService   criv1.ImageServiceClient
+	pushes         sync.Map
 }
 
 // Close the Interface connections to various backends.
