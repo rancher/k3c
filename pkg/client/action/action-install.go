@@ -233,11 +233,27 @@ func (a *InstallBuilder) DaemonSet(_ context.Context, k *client.Interface) error
 							Privileged: &privileged,
 						},
 						VolumeMounts: []corev1.VolumeMount{
+							{Name: "etc-pki", MountPath: "/etc/pki", ReadOnly: true},
+							{Name: "etc-ssl", MountPath: "/etc/ssl", ReadOnly: true},
 							{Name: "run", MountPath: "/run", MountPropagation: &mountPropagationBidirectional},
 							{Name: "var-lib-rancher", MountPath: "/var/lib/rancher", MountPropagation: &mountPropagationBidirectional},
 						},
 					}},
 					Volumes: []corev1.Volume{
+						{
+							Name: "etc-pki", VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/etc/pki", Type: &hostPathDirectoryOrCreate,
+								},
+							},
+						},
+						{
+							Name: "etc-ssl", VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/etc/ssl", Type: &hostPathDirectoryOrCreate,
+								},
+							},
+						},
 						{
 							Name: "cgroup", VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{

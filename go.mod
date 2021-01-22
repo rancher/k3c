@@ -36,11 +36,13 @@ replace (
 require (
 	github.com/containerd/console v1.0.1
 	github.com/containerd/containerd v1.4.3
+	github.com/containerd/cri v1.11.1-0.20200810101850-4e6644c8cf7f
 	github.com/containerd/typeurl v1.0.1
 	github.com/gogo/googleapis v1.3.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.4.3
 	github.com/moby/buildkit v0.8.1
+	github.com/moby/sys/symlink v0.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/pkg/errors v0.9.1
