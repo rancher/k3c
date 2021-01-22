@@ -76,12 +76,12 @@ func (i *Interface) PushProgress(req *imagesv1.ImageProgressRequest, srv imagesv
 					return err
 				}
 			}
-			logrus.Debugf("push-progress-done: %s ", req.Image)
+			logrus.Debugf("push-progress-done: %s", req.Image)
 			return nil
 		}
 		select {
 		case <-timeout:
-			logrus.Debugf("push-progress-timeout: %s ", req.Image)
+			logrus.Debugf("push-progress-timeout: not tracking %s", req.Image)
 			return nil
 		case <-ctx.Done():
 			return ctx.Err()
