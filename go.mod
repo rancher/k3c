@@ -38,6 +38,7 @@ require (
 	github.com/containerd/containerd v1.4.3
 	github.com/containerd/cri v1.11.1-0.20200810101850-4e6644c8cf7f
 	github.com/containerd/typeurl v1.0.1
+	github.com/docker/go-units v0.4.0
 	github.com/gogo/googleapis v1.3.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.4.3
