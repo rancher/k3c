@@ -1,0 +1,104 @@
+---
+kind: pipeline
+type: docker
+name: amd64
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+  - name: build-binaries
+    image: rancher/dapper:v0.5.0
+    environment:
+      GOLANG: golang:1.16beta1-alpine
+    commands:
+      - dapper -f Dockerfile --target dapper make GOOS=linux GOARCH=amd64 DRONE_TAG=${DRONE_TAG} dist
+      - dapper -f Dockerfile --target dapper make GOOS=linux GOARCH=arm64 DRONE_TAG=${DRONE_TAG} dist
+      - dapper -f Dockerfile --target dapper make GOOS=darwin GOARCH=amd64 DRONE_TAG=${DRONE_TAG} dist
+      - dapper -f Dockerfile --target dapper make GOOS=darwin GOARCH=arm64 DRONE_TAG=${DRONE_TAG} dist
+      - dapper -f Dockerfile --target dapper make GOOS=windows GOARCH=amd64 DRONE_TAG=${DRONE_TAG} dist
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+
+  - name: publish-binaries
+    image: plugins/github-release
+    settings:
+      api_key:
+        from_secret: github_token
+      checksum:
+        - sha256
+      checksum_file: CHECKSUMsum.txt
+      checksum_flatten: true
+      files:
+        - dist/artifacts/*
+      prerelease: true
+    when:
+      event:
+        - tag
+      instance:
+        - drone-publish.rancher.io
+      ref:
+        - refs/head/master
+        - refs/tags/*
+
+  - name: publish-images
+    image: rancher/dapper:v0.5.0
+    commands:
+      - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+      - make DRONE_TAG=${DRONE_TAG} publish
+    environment:
+      DOCKER_USERNAME:
+        from_secret: docker_username
+      DOCKER_PASSWORD:
+        from_secret: docker_password
+    when:
+      event:
+        - tag
+      instance:
+        - drone-publish.rancher.io
+      ref:
+        - refs/head/master
+        - refs/tags/*
+
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+
+---
+kind: pipeline
+type: docker
+name: arm64
+
+platform:
+  os: linux
+  arch: arm64
+
+steps:
+  - name: publish-images
+    image: rancher/dapper:v0.5.0
+    commands:
+      - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+      - make DRONE_TAG=${DRONE_TAG} publish
+    environment:
+      DOCKER_USERNAME:
+        from_secret: docker_username
+      DOCKER_PASSWORD:
+        from_secret: docker_password
+    when:
+      event:
+        - tag
+      instance:
+        - drone-publish.rancher.io
+      ref:
+        - refs/head/master
+        - refs/tags/*
+
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+
+...

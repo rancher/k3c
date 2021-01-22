@@ -51,6 +51,7 @@ require (
 	github.com/rancher/wrangler-cli v0.0.0-20200815040857-81c48cf8ab43
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
+	golang.org/dl v0.0.0-20210120004500-be2bfd84e4cf // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	google.golang.org/grpc v1.29.1
 	k8s.io/api v0.19.0
