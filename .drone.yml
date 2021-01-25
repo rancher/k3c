@@ -44,8 +44,9 @@ steps:
         - refs/tags/*
 
   - name: publish-images
-    image: rancher/dapper:v0.5.0
+    image: golang:1.16beta1-alpine
     commands:
+      - apk --no-cache add docker-cli file git make
       - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       - make DRONE_TAG=${DRONE_TAG} publish
     environment:
@@ -78,8 +79,9 @@ platform:
 
 steps:
   - name: publish-images
-    image: rancher/dapper:v0.5.0
+    image: golang:1.16beta1-alpine
     commands:
+      - apk --no-cache add docker-cli file git make
       - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       - make DRONE_TAG=${DRONE_TAG} publish
     environment:
